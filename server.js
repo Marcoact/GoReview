@@ -13,6 +13,213 @@ const GMAIL_USER = 'reviewgo29@gmail.com';
 const GMAIL_APP_PASS = 'cyqiutwwmnkcozsg';
 
 /**
+ * Gera um ficheiro PDF 1.4 executivo nativo (sem dependências externas)
+ * contendo o resumo de auditoria, KPIs, distribuição gráfica e reclamações.
+ * @param {Object} reportData - Dados consolidados do relatório
+ * @returns {Buffer} Buffer binário do PDF pronto para anexo ou download
+ */
+function generateReportPdfBuffer(reportData) {
+    const data = reportData || {};
+    const clientName = data.clientName || 'Estabelecimento';
+    const clientNif = data.clientNif || 'N/A';
+    const month = data.monthFilter || 'Relatório Mensal';
+    const total = data.total || 0;
+    const avgRating = typeof data.avgRating === 'number' ? data.avgRating.toFixed(1) : (data.avgRating || '0.0');
+    const positiveCount = data.positiveCount || 0;
+    const positiveRate = data.positiveRate || 0;
+    const complaintsCount = data.complaintsCount || 0;
+    const dist = data.ratingDistribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const complaints = data.complaintsList || [];
+
+    const pageContent = [];
+
+    // Conversão de coordenadas (A4: 595.28 x 841.89 pt)
+    const rect = (x, y, w, h, fillRgb, strokeRgb, lineWidth = 1) => {
+        const pdfY = 841.89 - y - h;
+        let s = 'q\n';
+        if (fillRgb) s += `${fillRgb[0]} ${fillRgb[1]} ${fillRgb[2]} rg\n`;
+        if (strokeRgb) s += `${strokeRgb[0]} ${strokeRgb[1]} ${strokeRgb[2]} RG ${lineWidth} w\n`;
+        s += `${x.toFixed(2)} ${pdfY.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re\n`;
+        if (fillRgb && strokeRgb) s += 'B\n';
+        else if (fillRgb) s += 'f\n';
+        else s += 'S\n';
+        s += 'Q\n';
+        pageContent.push(s);
+    };
+
+    const text = (str, x, y, options = {}) => {
+        const font = options.font || '/F1';
+        const size = options.size || 10;
+        const color = options.color || [0.1, 0.1, 0.1];
+        const pdfY = 841.89 - y;
+
+        const safeStr = String(str || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/\(/g, '\\(')
+            .replace(/\)/g, '\\)')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        let s = 'BT\n';
+        s += `${font} ${size} Tf\n`;
+        s += `${color[0]} ${color[1]} ${color[2]} rg\n`;
+        s += `${x.toFixed(2)} ${pdfY.toFixed(2)} Td\n`;
+        s += `(${safeStr}) Tj\n`;
+        s += 'ET\n';
+        pageContent.push(s);
+    };
+
+    // 1. Cabeçalho Executivo GoReview
+    rect(0, 0, 595.28, 92, [0.06, 0.09, 0.16]); // #0f172a
+    rect(0, 92, 595.28, 3, [0.39, 0.4, 0.95]); // Linha indigo
+
+    text('GOREVIEW - RELATORIO EXECUTIVO MENSAL', 36, 32, { font: '/F2', size: 15, color: [1, 1, 1] });
+    text(`Estabelecimento: ${clientName} (NIF: ${clientNif})`, 36, 52, { font: '/F1', size: 10, color: [0.85, 0.9, 0.98] });
+    text(`Periodo Oficial de Auditoria: ${month} | Emitido via GoReview Engine`, 36, 68, { font: '/F1', size: 8, color: [0.65, 0.75, 0.9] });
+
+    // 2. 4 Caixas de KPIs
+    const boxW = 122;
+    const boxH = 58;
+    const startY = 112;
+
+    // KPI 1: Total
+    rect(36, startY, boxW, boxH, [0.96, 0.97, 0.99], [0.82, 0.85, 0.92]);
+    text('TOTAL AVALIACOES', 46, startY + 16, { font: '/F2', size: 7.5, color: [0.4, 0.45, 0.55] });
+    text(String(total), 46, startY + 42, { font: '/F2', size: 20, color: [0.08, 0.1, 0.18] });
+
+    // KPI 2: Média
+    rect(168, startY, boxW, boxH, [0.94, 0.99, 0.96], [0.75, 0.9, 0.82]);
+    text('MEDIA GLOBAL', 178, startY + 16, { font: '/F2', size: 7.5, color: [0.1, 0.55, 0.35] });
+    text(`${avgRating} / 5.0`, 178, startY + 42, { font: '/F2', size: 18, color: [0.05, 0.48, 0.28] });
+
+    // KPI 3: Google Maps
+    rect(300, startY, boxW, boxH, [0.95, 0.96, 1.0], [0.8, 0.82, 0.95]);
+    text('GOOGLE MAPS (4-5★)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
+    text(`${positiveCount} (${positiveRate}%)`, 310, startY + 42, { font: '/F2', size: 16, color: [0.25, 0.25, 0.65] });
+
+    // KPI 4: Reclamações
+    rect(432, startY, boxW + 4, boxH, [1.0, 0.96, 0.96], [0.95, 0.8, 0.8]);
+    text('RECLAMACOES (1-3★)', 442, startY + 16, { font: '/F2', size: 7.5, color: [0.75, 0.2, 0.25] });
+    text(`${complaintsCount} Retidas`, 442, startY + 42, { font: '/F2', size: 16, color: [0.7, 0.15, 0.2] });
+
+    // 3. Eficácia do Filtro Ético
+    rect(36, 185, 524, 46, [0.98, 0.98, 1.0], [0.85, 0.88, 0.96]);
+    text('IMPACTO DO FILTRO ETICO GOREVIEW', 48, 201, { font: '/F2', size: 9, color: [0.2, 0.25, 0.6] });
+    text(
+        `• ${positiveCount} clientes satisfeitos (${positiveRate}%) foram encaminhados diretamente para o Google Maps, impulsionando o SEO local.`,
+        48,
+        215,
+        { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
+    );
+    text(
+        `• ${complaintsCount} criticas negativas foram retidas confidencialmente na Caixa de Reclamacoes, protegendo a pontuacao publica.`,
+        48,
+        225,
+        { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
+    );
+
+    // 4. Distribuição por Estrelas (Barras Gráficas)
+    text('DISTRIBUICAO DE AVALIACOES POR ESTRELAS', 36, 252, { font: '/F2', size: 10, color: [0.1, 0.15, 0.25] });
+    rect(36, 260, 524, 88, [1, 1, 1], [0.88, 0.9, 0.93]);
+
+    const starKeys = [5, 4, 3, 2, 1];
+    starKeys.forEach((star, idx) => {
+        const rowY = 276 + idx * 14;
+        const count = dist[star] || 0;
+        const pct = total > 0 ? (count / total) : 0;
+        const barMaxW = 320;
+        const currentBarW = Math.max(pct * barMaxW, count > 0 ? 4 : 0);
+
+        text(`${star} Estrelas`, 48, rowY, { font: '/F2', size: 8, color: [0.3, 0.35, 0.45] });
+
+        rect(110, rowY - 7, barMaxW, 8, [0.93, 0.94, 0.96]);
+        const barColor = star >= 4 ? [0.1, 0.72, 0.48] : star === 3 ? [0.95, 0.6, 0.1] : [0.9, 0.25, 0.3];
+        if (currentBarW > 0) {
+            rect(110, rowY - 7, currentBarW, 8, barColor);
+        }
+        text(`${count} (${Math.round(pct * 100)}%)`, 440, rowY, { font: '/F1', size: 8, color: [0.4, 0.45, 0.55] });
+    });
+
+    // 5. Auditoria de Críticas e Feedbacks Privados
+    text('CRITICAS E RECLAMACOES PRIVADAS RECEBIDAS (CONFIDENCIAL)', 36, 370, { font: '/F2', size: 10, color: [0.1, 0.15, 0.25] });
+
+    let compY = 382;
+    if (complaints.length === 0) {
+        rect(36, compY, 524, 40, [0.98, 0.99, 0.98], [0.85, 0.92, 0.85]);
+        text('Nenhuma critica negativa registada no periodo em analise. Parabens a equipa!', 48, compY + 24, {
+            font: '/F1',
+            size: 9,
+            color: [0.15, 0.55, 0.3]
+        });
+        compY += 50;
+    } else {
+        complaints.slice(0, 4).forEach((c, idx) => {
+            const cardH = 46;
+            rect(36, compY, 524, cardH, [0.99, 0.99, 1.0], [0.88, 0.9, 0.94]);
+
+            const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-PT') : 'N/A';
+            const contactStr = c.customerContact ? `Contacto: ${c.customerContact}` : 'Sem contacto indicado';
+
+            text(`${idx + 1}. [${c.rating}★] - Data: ${dateStr} | ${contactStr}`, 46, compY + 16, {
+                font: '/F2',
+                size: 8,
+                color: [0.75, 0.2, 0.25]
+            });
+
+            const safeComm = (c.comment || 'Sem comentario adicional').slice(0, 100);
+            text(`"${safeComm}"`, 46, compY + 32, { font: '/F1', size: 8, color: [0.2, 0.25, 0.35] });
+
+            compY += cardH + 6;
+        });
+    }
+
+    // 6. Rodapé Oficial GoReview
+    rect(36, 780, 524, 30, [0.97, 0.98, 1.0], [0.85, 0.88, 0.94]);
+    text('GoReview Reports - Documento confidencial gerado automaticamente pelo Sistema de Gestao Etica NFC & Google Maps.', 46, 794, {
+        font: '/F1',
+        size: 7,
+        color: [0.4, 0.45, 0.55]
+    });
+    text(`Data de Emissao: ${new Date().toLocaleDateString('pt-PT')} | Suporte: reviewgo29@gmail.com`, 46, 804, {
+        font: '/F1',
+        size: 6.5,
+        color: [0.55, 0.6, 0.7]
+    });
+
+    const streamContent = pageContent.join('');
+    const streamLen = Buffer.byteLength(streamContent, 'utf8');
+
+    let out = '%PDF-1.4\n';
+    const offsets = [];
+
+    const appendObj = (id, body) => {
+        offsets[id] = Buffer.byteLength(out, 'utf8');
+        out += `${id} 0 obj\n${body}\nendobj\n`;
+    };
+
+    appendObj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    appendObj(2, '<< /Type /Pages /Kids [5 0 R] /Count 1 >>');
+    appendObj(3, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    appendObj(4, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    appendObj(5, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>');
+    appendObj(6, `<< /Length ${streamLen} >>\nstream\n${streamContent}\nendstream`);
+
+    const startXref = Buffer.byteLength(out, 'utf8');
+    out += 'xref\n';
+    out += `0 7\n`;
+    out += '0000000000 65535 f \n';
+    for (let i = 1; i <= 6; i++) {
+        out += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    }
+    out += 'trailer\n';
+    out += '<< /Size 7 /Root 1 0 R >>\n';
+    out += 'startxref\n';
+    out += `${startXref}\n`;
+    out += '%%EOF\n';
+
+    return Buffer.from(out, 'utf8');
+}
+
+/**
  * Envia um e-mail com anexo opcional através do protocolo SMTP seguro (TLS/SSL - porta 465) do Gmail.
  * @param {Object} options
  * @param {string} options.to - Destinatário
@@ -162,8 +369,18 @@ const server = http.createServer((req, res) => {
                 const to = (payload.to || '').trim();
                 const subject = (payload.subject || '').trim();
                 const body = (payload.body || '').trim();
-                const pdfBase64 = payload.pdfBase64 || null;
+                let pdfBase64 = payload.pdfBase64 || null;
                 const pdfFilename = payload.pdfFilename || 'relatorio-goreview.pdf';
+
+                if (!pdfBase64 && payload.report) {
+                    try {
+                        const pdfBuf = generateReportPdfBuffer(payload.report);
+                        pdfBase64 = pdfBuf.toString('base64');
+                        console.log(`[PDF] Relatório gerado com sucesso (${pdfBuf.length} bytes) para anexo via Gmail SMTP.`);
+                    } catch (errPdf) {
+                        console.error('[PDF] Erro ao sintetizar buffer PDF para o e-mail:', errPdf);
+                    }
+                }
 
                 if (!to || !subject || !body) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });

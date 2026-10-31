@@ -174,7 +174,24 @@ export class EmailService {
                     to: emailData.recipient,
                     subject: emailData.subject,
                     body: emailData.body,
-                    pdfFilename: emailData.pdfFilename
+                    pdfFilename: emailData.pdfFilename,
+                    report: {
+                        clientName: report.client?.name || 'Estabelecimento',
+                        clientNif: report.client?.nif || 'N/A',
+                        monthFilter: EmailService.formatPeriodName(report.monthFilter),
+                        total: report.total || 0,
+                        avgRating: report.avgRating || 0,
+                        positiveCount: report.positiveCount || 0,
+                        positiveRate: report.positiveRate || 0,
+                        complaintsCount: report.complaintsCount || 0,
+                        ratingDistribution: report.ratingDistribution || {},
+                        complaintsList: (report.complaintsList || []).map((c) => ({
+                            rating: c.rating,
+                            createdAt: c.createdAt,
+                            comment: c.comment,
+                            customerContact: c.customerContact
+                        }))
+                    }
                 }),
                 signal: controller.signal
             });
