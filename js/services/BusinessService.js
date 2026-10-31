@@ -200,7 +200,7 @@ export class BusinessService {
             return { business: null, error: 'O NIF deve conter exatamente 9 dígitos numéricos.' };
         }
 
-        const googleUrl = ValidatorService.sanitizeText(payload.googleReviewUrl || payload.google_review_url, 500);
+        const googleUrl = ValidatorService.sanitizeText(payload.googleReviewUrl || payload.google_review_url, 1500);
         if (!ValidatorService.isValidUrl(googleUrl)) {
             return { business: null, error: 'Indique um endereço URL válido (http:// ou https://) para o Google Maps.' };
         }
@@ -272,7 +272,7 @@ export class BusinessService {
         if (updates.googleReviewUrl !== undefined || updates.google_review_url !== undefined) {
             dbUpdates.google_review_url = ValidatorService.sanitizeText(
                 updates.googleReviewUrl ?? updates.google_review_url,
-                500
+                1500
             );
         }
         if (updates.status !== undefined) {

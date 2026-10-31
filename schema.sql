@@ -129,7 +129,7 @@ VALUES
         '509123456',
         'cafe-central',
         'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=240&q=80',
-        'https://www.google.com/maps/search/?api=1&query=Cafe+Central+Lisboa',
+        'https://www.google.com/maps/place/Caf%C3%A9+Central/@38.731279,-9.1705097,7534m/data=!3m1!1e3!4m12!1m2!2m1!1sCafe+Central+Lisboa!3m8!1s0xd19338ec9f1ced7:0x2dd4df60ea7b4f95!8m2!3d38.7196053!4d-9.1304523!9m1!1b1!15sChNDYWZlIENlbnRyYWwgTGlzYm9hWhUiE2NhZmUgY2VudHJhbCBsaXNib2GSAQpyZXN0YXVyYW50mgEjQ2haRFNVaE5NRzluUzBWSlEwRm5TVVJJTkdaRVZHSjNFQUXgAQD6AQQIMxBC!16s%2Fg%2F11f54tkvwq?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D',
         'active',
         true
     ),
