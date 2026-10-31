@@ -184,7 +184,8 @@ export class EmailService {
                         positiveCount: report.positiveCount || 0,
                         positiveRate: report.positiveRate || 0,
                         complaintsCount: report.complaintsCount || 0,
-                        ratingDistribution: report.ratingDistribution || {},
+                        starsBreakdown: report.starsBreakdown || report.ratingDistribution || {},
+                        ratingDistribution: report.starsBreakdown || report.ratingDistribution || {},
                         complaintsList: (report.complaintsList || []).map((c) => ({
                             rating: c.rating,
                             createdAt: c.createdAt,

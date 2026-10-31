@@ -28,7 +28,7 @@ function generateReportPdfBuffer(reportData) {
     const positiveCount = data.positiveCount || 0;
     const positiveRate = data.positiveRate || 0;
     const complaintsCount = data.complaintsCount || 0;
-    const dist = data.ratingDistribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const dist = data.starsBreakdown || data.ratingDistribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     const complaints = data.complaintsList || [];
 
     const pageContent = [];
@@ -93,25 +93,25 @@ function generateReportPdfBuffer(reportData) {
 
     // KPI 3: Google Maps
     rect(300, startY, boxW, boxH, [0.95, 0.96, 1.0], [0.8, 0.82, 0.95]);
-    text('GOOGLE MAPS (4-5★)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
+    text('GOOGLE MAPS (4-5 Estrelas)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
     text(`${positiveCount} (${positiveRate}%)`, 310, startY + 42, { font: '/F2', size: 16, color: [0.25, 0.25, 0.65] });
 
     // KPI 4: Reclamações
     rect(432, startY, boxW + 4, boxH, [1.0, 0.96, 0.96], [0.95, 0.8, 0.8]);
-    text('RECLAMACOES (1-3★)', 442, startY + 16, { font: '/F2', size: 7.5, color: [0.75, 0.2, 0.25] });
+    text('RECLAMACOES (1-3 Estrelas)', 442, startY + 16, { font: '/F2', size: 7.5, color: [0.75, 0.2, 0.25] });
     text(`${complaintsCount} Retidas`, 442, startY + 42, { font: '/F2', size: 16, color: [0.7, 0.15, 0.2] });
 
     // 3. Eficácia do Filtro Ético
     rect(36, 185, 524, 46, [0.98, 0.98, 1.0], [0.85, 0.88, 0.96]);
     text('IMPACTO DO FILTRO ETICO GOREVIEW', 48, 201, { font: '/F2', size: 9, color: [0.2, 0.25, 0.6] });
     text(
-        `• ${positiveCount} clientes satisfeitos (${positiveRate}%) foram encaminhados diretamente para o Google Maps, impulsionando o SEO local.`,
+        `- ${positiveCount} clientes satisfeitos (${positiveRate}%) foram encaminhados diretamente para o Google Maps, impulsionando o SEO local.`,
         48,
         215,
         { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
     );
     text(
-        `• ${complaintsCount} criticas negativas foram retidas confidencialmente na Caixa de Reclamacoes, protegendo a pontuacao publica.`,
+        `- ${complaintsCount} criticas negativas foram retidas confidencialmente na Caixa de Reclamacoes, protegendo a pontuacao publica.`,
         48,
         225,
         { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
@@ -124,10 +124,10 @@ function generateReportPdfBuffer(reportData) {
     const starKeys = [5, 4, 3, 2, 1];
     starKeys.forEach((star, idx) => {
         const rowY = 276 + idx * 14;
-        const count = dist[star] || 0;
+        const count = Number(dist[star] ?? dist[String(star)] ?? 0);
         const pct = total > 0 ? (count / total) : 0;
         const barMaxW = 320;
-        const currentBarW = Math.max(pct * barMaxW, count > 0 ? 4 : 0);
+        const currentBarW = Math.max(pct * barMaxW, count > 0 ? 6 : 0);
 
         text(`${star} Estrelas`, 48, rowY, { font: '/F2', size: 8, color: [0.3, 0.35, 0.45] });
 
@@ -159,7 +159,7 @@ function generateReportPdfBuffer(reportData) {
             const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-PT') : 'N/A';
             const contactStr = c.customerContact ? `Contacto: ${c.customerContact}` : 'Sem contacto indicado';
 
-            text(`${idx + 1}. [${c.rating}★] - Data: ${dateStr} | ${contactStr}`, 46, compY + 16, {
+            text(`${idx + 1}. [${c.rating} Estrelas] - Data: ${dateStr} | ${contactStr}`, 46, compY + 16, {
                 font: '/F2',
                 size: 8,
                 color: [0.75, 0.2, 0.25]
