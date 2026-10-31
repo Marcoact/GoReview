@@ -42,15 +42,13 @@ export class EmailService {
     }
 
     /**
-     * Constrói o Assunto oficial de nível executivo para o e-mail do cliente.
+     * Constrói o Assunto oficial para o e-mail do cliente.
      * @param {Object} report - Objeto consolidado do relatório.
-     * @returns {string} Assunto profissional formatado.
+     * @returns {string} Assunto dinâmico formatado.
      */
     buildExecutiveSubject(report) {
-        const clientName = report.client?.name || 'Estabelecimento';
-        const nif = report.client?.nif ? ` (NIF ${report.client.nif})` : '';
         const periodName = EmailService.formatPeriodName(report.monthFilter);
-        return `[GoReview] Relatório Executivo Mensal de Avaliações & Reputação — ${clientName}${nif} • ${periodName}`;
+        return `Envio do Relatório Mensal de Avaliações – ${periodName}`;
     }
 
     /**
@@ -59,77 +57,19 @@ export class EmailService {
      * @returns {string} Texto estruturado e formal para envio por e-mail.
      */
     buildExecutiveEmailBody(report) {
-        const client = report.client || {};
+        const clientName = report.client?.name || 'Estabelecimento';
         const periodName = EmailService.formatPeriodName(report.monthFilter);
         const pdfFileName = EmailService.buildPdfFilename(report);
 
-        // Formatação das críticas privadas na Caixa de Reclamações
-        const complaintsText =
-            report.complaintsList && report.complaintsList.length > 0
-                ? report.complaintsList
-                      .map((c, idx) => {
-                          const dateStr = new Date(c.createdAt).toLocaleDateString('pt-PT');
-                          const contactStr = c.customerContact ? `Contacto do Cliente: ${c.customerContact}` : 'Sem contacto facultado';
-                          return `${idx + 1}. [Classificação: ${c.rating}★ | Data: ${dateStr}]\n` +
-                                 `   Feedback Registado: "${c.comment || 'Sem comentário adicional'}"\n` +
-                                 `   -> ${contactStr}`;
-                      })
-                      .join('\n\n')
-                : 'Não foram registadas críticas negativas no período em análise. A sua equipa manteve 100% de satisfação!';
-
-        const statusLabel =
-            client.status === 'trial'
-                ? 'Período Experimental (1º Mês Grátis GoReview)'
-                : client.status === 'active'
-                ? 'Subscrição Ativa'
-                : 'Inativo';
-
         return (
-            `Exmo.(a) Gerente e Equipa de Direção do ${client.name},\n\n` +
-            `Esperamos que esta comunicação o(a) encontre bem.\n\n` +
-            `Na qualidade de parceiro tecnológico de gestão de reputação e experiência do cliente da GoReview, temos a satisfação de enviar o seu Relatório Executivo Mensal de Avaliações referente a ${periodName}.\n\n` +
-            `----------------------------------------------------------------------\n` +
-            `DOCUMENTO EM ANEXO: [ ${pdfFileName} ]\n` +
-            `Consulte o PDF oficial em anexo com os gráficos 3D de conversão,\n` +
-            `estatísticas detalhadas e auditoria do Filtro Ético.\n` +
-            `----------------------------------------------------------------------\n\n` +
-            `======================================================================\n` +
-            `1. RESUMO EXECUTIVO DE INDICADORES (KPIs)\n` +
-            `======================================================================\n` +
-            `• Estabelecimento: ${client.name}\n` +
-            `• NIF: ${client.nif || 'N/A'} | Estado do Serviço: ${statusLabel}\n` +
-            `• Total de Avaliações Registadas: ${report.total} interações\n` +
-            `• Classificação Média Global: ${report.avgRating.toFixed(1)} / 5.0 ★\n` +
-            `• Eficácia do Filtro Ético: ${report.positiveRate}% de satisfação canalizada\n\n` +
-            `======================================================================\n` +
-            `2. ANÁLISE DE IMPACTO DO FILTRO ÉTICO GOREVIEW\n` +
-            `======================================================================\n` +
-            `A) REPUTAÇÃO PÚBLICA (GOOGLE MAPS):\n` +
-            `   • ${report.positiveCount} clientes (${report.positiveRate}%) atribuíram 4 ou 5 estrelas.\n` +
-            `   • Estes clientes foram encaminhados diretamente para a sua página oficial do Google Maps,\n` +
-            `     impulsionando a nota pública, o ranking de SEO local e a atração de novos visitantes.\n\n` +
-            `B) PROTEÇÃO DE MARCA & RESOLUÇÃO INTERNA:\n` +
-            `   • ${report.complaintsCount} clientes registaram notas entre 1 e 3 estrelas.\n` +
-            `   • GRAÇAS AO FILTRO ÉTICO GOREVIEW, estas críticas NÃO foram publicadas no Google Maps,\n` +
-            `     sendo retidas confidencialmente na sua Caixa de Reclamações privada para ação interna imediata.\n\n` +
-            `======================================================================\n` +
-            `3. AUDITORIA DE CRÍTICAS E RECLAMAÇÕES RETIDAS (CONFIDENCIAL)\n` +
-            `======================================================================\n` +
-            `${complaintsText}\n\n` +
-            `======================================================================\n` +
-            `4. RECOMENDAÇÕES ESTRATÉGICAS GOREVIEW\n` +
-            `======================================================================\n` +
-            `• Recuperação de Clientes: Recomendamos um contacto de cortesia aos clientes com contacto\n` +
-            `  indicado acima, transformando uma experiência menos positiva numa relação de fidelização.\n` +
-            `• Formação Contínua: Analisar os pontos operacionais sinalizados nos horários de maior afluência.\n` +
-            `• Acesso ao Backoffice: Pode visualizar os gráficos 3D interativos e exportações a qualquer\n` +
-            `  momento em: ${ENV.EMAIL_SERVICE?.SUPPORT_URL || 'https://goreview-review.netlify.app'}?admin=true\n\n` +
-            `Ficamos à vossa inteira disposição para apoiar a expansão da reputação do vosso negócio.\n\n` +
-            `Com os nossos melhores cumprimentos,\n\n` +
-            `Equipa de Customer Success & Apoio à Gestão\n` +
-            `GoReview — Gestão Ética de Avaliações NFC & Google Maps\n` +
-            `E-mail de Suporte: ${ENV.EMAIL_SERVICE?.DEFAULT_SENDER_EMAIL || 'relatorios@goreview.pt'}\n` +
-            `Website: ${ENV.EMAIL_SERVICE?.SUPPORT_URL || 'https://goreview-review.netlify.app'}`
+            `Exmo.(a) Gerente e Equipa de Direção do ${clientName},\n` +
+            `Esperamos que este e-mail o(a) encontre bem.\n` +
+            `Na GoReview, trabalhamos diariamente para ajudar o seu negócio a acompanhar a opinião e a experiência dos seus clientes. É com gosto que partilhamos o Relatório Executivo Mensal de Avaliações relativo ao mês de ${periodName}.\n\n` +
+            `DOCUMENTO EM ANEXO: ${pdfFileName}\n\n` +
+            `Neste documento vai encontrar o resumo do desempenho do vosso espaço no último mês, incluindo os principais destaques, a evolução da vossa pontuação e a análise detalhada das opiniões deixadas online.\n` +
+            `Estamos à inteira disposição para esclarecer qualquer dúvida ou ajudar a analisar estes resultados.\n\n` +
+            `Com os melhores cumprimentos,\n` +
+            `Equipa GoReview`
         );
     }
 

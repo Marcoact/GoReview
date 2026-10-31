@@ -101,20 +101,20 @@ function generateReportPdfBuffer(reportData) {
     text('RECLAMACOES (1-3 Estrelas)', 442, startY + 16, { font: '/F2', size: 7.5, color: [0.75, 0.2, 0.25] });
     text(`${complaintsCount} Retidas`, 442, startY + 42, { font: '/F2', size: 16, color: [0.7, 0.15, 0.2] });
 
-    // 3. Eficácia do Filtro Ético
-    rect(36, 185, 524, 46, [0.98, 0.98, 1.0], [0.85, 0.88, 0.96]);
-    text('IMPACTO DO FILTRO ETICO GOREVIEW', 48, 201, { font: '/F2', size: 9, color: [0.2, 0.25, 0.6] });
+    // 3. Gestão Inteligente de Feedback
+    rect(36, 185, 524, 50, [0.98, 0.98, 1.0], [0.85, 0.88, 0.96]);
+    text('GESTAO INTELIGENTE DE FEEDBACK', 48, 201, { font: '/F2', size: 9, color: [0.2, 0.25, 0.6] });
     text(
-        `- ${positiveCount} clientes satisfeitos (${positiveRate}%) foram encaminhados diretamente para o Google Maps, impulsionando o SEO local.`,
+        `* Avaliacoes Publicas: ${positiveCount} avaliacoes positivas (${positiveRate}%) foram publicadas diretamente no seu perfil online, atraindo novos clientes para o seu negocio.`,
         48,
         215,
-        { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
+        { font: '/F1', size: 7.5, color: [0.3, 0.35, 0.45] }
     );
     text(
-        `- ${complaintsCount} criticas negativas foram retidas confidencialmente na Caixa de Reclamacoes, protegendo a pontuacao publica.`,
+        `* Alertas Privados: ${complaintsCount} criticas negativas foram retidas no seu canal confidencial para que possa resolver o problema internamente, sem afetar a sua imagem publica.`,
         48,
-        225,
-        { font: '/F1', size: 8, color: [0.3, 0.35, 0.45] }
+        226,
+        { font: '/F1', size: 7.5, color: [0.3, 0.35, 0.45] }
     );
 
     // 4. Distribuição por Estrelas (Barras Gráficas)
