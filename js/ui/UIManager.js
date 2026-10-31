@@ -58,6 +58,7 @@ export class UIManager {
             submitBtnText: document.getElementById('submit-btn-text'),
             formErrorAlert: document.getElementById('form-error-alert'),
             manualGoogleLink: document.getElementById('manual-google-link'),
+            btnOpenGoogleDirect: document.getElementById('btn-open-google-direct'),
 
             // Login de Administrador
             loginForm: document.getElementById('login-form'),
@@ -352,6 +353,9 @@ export class UIManager {
     showRedirectingView(googleReviewUrl) {
         if (this.elements.manualGoogleLink) {
             this.elements.manualGoogleLink.href = googleReviewUrl;
+        }
+        if (this.elements.btnOpenGoogleDirect) {
+            this.elements.btnOpenGoogleDirect.href = googleReviewUrl;
         }
         this.showView('redirecting');
     }

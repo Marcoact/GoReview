@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Gradiente de Fundo Premium (Midnight Slate para Royal Indigo) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+
+    <!-- Gradiente Dourado da Estrela GoReview -->
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <!-- Gradiente Esmeralda do "Go" (Seta de Elevação) -->
+    <linearGradient id="goGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <!-- Sombra suave para profundidade -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <filter id="starGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#f59e0b" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Fundo Squircle Suave estilo Apple / Modern App Icon -->
+  <rect width="512" height="512" rx="118" fill="url(#bgGrad)" filter="url(#glow)" />
+  <rect width="504" height="504" x="4" y="4" rx="114" fill="none" stroke="#4338ca" stroke-width="4" stroke-opacity="0.4" />
+
+  <!-- Estrela Central 5★ com Sombreamento Preciso -->
+  <path
+    d="M256 96 L298 194 L404 206 L325 277 L347 382 L256 329 L165 382 L187 277 L108 206 L214 194 Z"
+    fill="url(#starGrad)"
+    filter="url(#starGlow)"
+  />
+
+  <!-- Faceta Interior de Iluminação da Estrela -->
+  <path
+    d="M256 96 L298 194 L256 329 L214 194 Z"
+    fill="#ffffff"
+    fill-opacity="0.22"
+  />
+
+  <!-- Seta Dinâmica "GO" em Arco de Elevação -->
+  <path
+    d="M136 392 C184 424, 280 432, 360 380 L346 364 L416 368 L396 300 L378 322 C308 376, 216 368, 164 336 Z"
+    fill="url(#goGrad)"
+    filter="url(#glow)"
+  />
+
+  <!-- Ponto de Destaque / Conexão NFC -->
+  <circle cx="396" cy="144" r="18" fill="#38bdf8" />
+  <circle cx="396" cy="144" r="30" fill="none" stroke="#38bdf8" stroke-width="4" stroke-opacity="0.45" />
+</svg>
+

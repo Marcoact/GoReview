@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GoReview | Avaliação & Portal de Administração</title>
 
+    <!-- Favicon & Identidade Visual GoReview -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
+    <meta name="theme-color" content="#1e1b4b" />
+
     <!-- Fonte Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -486,23 +491,50 @@
             <!-- ========================================================== -->
             <!-- VISTA 6: REDIRECIONAMENTO GOOGLE MAPS (4 OU 5 ESTRELAS)    -->
             <!-- ========================================================== -->
-            <section id="view-redirecting" class="hidden py-10 text-center space-y-5">
-                <div class="mx-auto w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+            <section id="view-redirecting" class="hidden py-8 text-center space-y-6">
+                <!-- Ícone Animado de Sucesso & Elevação -->
+                <div class="relative mx-auto w-20 h-20 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-3xl bg-emerald-500/20 animate-ping opacity-75"></div>
+                    <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                        <svg class="w-9 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
                 </div>
+
                 <div class="space-y-2">
-                    <h2 class="text-xl font-bold text-slate-900">Obrigado pela avaliação positiva!</h2>
-                    <p class="text-sm text-slate-500">
-                        Estamos a redirecioná-lo para o <strong>Google Maps</strong> oficial da empresa...
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold tracking-wide uppercase">
+                        <span>⭐</span>
+                        <span>Experiência Positiva</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Muito obrigado pela preferência!</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
+                        A sua avaliação é fundamental para apoiar o nosso negócio local. Estamos a abrir o <strong>Google Maps</strong>...
                     </p>
                 </div>
-                <div class="pt-2">
-                    <a id="manual-google-link" href="#" rel="noopener noreferrer"
-                       class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline">
-                        Clique aqui se não for redirecionado automaticamente
+
+                <!-- Barra de Progresso Suave -->
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden max-w-xs mx-auto">
+                    <div class="bg-gradient-to-r from-emerald-500 to-indigo-600 h-1.5 rounded-full animate-pulse w-full"></div>
+                </div>
+
+                <div class="space-y-3 pt-1">
+                    <a
+                        id="btn-open-google-direct"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center justify-center gap-2.5 w-full py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold text-xs shadow-md transition transform active:scale-98"
+                    >
+                        <span>Abrir Google Maps Agora</span>
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
                     </a>
+
+                    <p class="text-[11px] text-slate-400">
+                        Basta confirmar as estrelas no Google para apoiar a nossa equipa.
+                    </p>
                 </div>
             </section>
 
