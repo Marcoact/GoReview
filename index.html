@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GoReview | Avaliação & Portal de Administração</title>
+
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Supabase JS SDK v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @media print {
+            body > *:not(#report-modal) {
+                display: none !important;
+            }
+            #report-modal {
+                position: static !important;
+                background: white !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+            #report-modal-panel {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 antialiased flex flex-col justify-between selection:bg-indigo-600 selection:text-white">
+
+    <!-- Contentor Central (ajusta largura automaticamente entre modo Cliente e modo Admin) -->
+    <main class="flex-1 flex items-center justify-center px-4 py-8 no-print">
+        <div id="app-card-container" class="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-100 p-6 sm:p-8 transition-all duration-300">
+
+            <!-- ========================================================== -->
+            <!-- VISTA 1: A CARREGAR DADOS                                  -->
+            <!-- ========================================================== -->
+            <section id="view-loading" class="py-12 flex flex-col items-center text-center space-y-4">
+                <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
+                <p class="text-sm font-medium text-slate-500">A carregar dados...</p>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 2: DIRETÓRIO DE EMPRESAS ATIVAS (POR NIF)            -->
+            <!-- ========================================================== -->
+            <section id="view-directory" class="hidden space-y-5">
+                <div class="flex items-center justify-between">
+                    <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                        Ambiente de Teste
+                    </span>
+                    <a
+                        href="?admin=true"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition shadow-xs"
+                    >
+                        <span>⚙️</span>
+                        <span>Portal de Administração</span>
+                    </a>
+                </div>
+
+                <div class="text-center space-y-1.5 pt-1">
+                    <h1 class="text-xl font-bold text-slate-900">Selecione uma Empresa pelo NIF</h1>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Escolha uma empresa ativa para testar o filtro ético ou clique nos <strong>3 pontinhos (⋯)</strong> em frente ao nome para exportar o <strong>Relatório Mensal 3D</strong>.
+                    </p>
+                </div>
+
+                <div id="test-companies-list" class="space-y-2.5"></div>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 2.5: LOGIN DE ADMINISTRADOR                          -->
+            <!-- ========================================================== -->
+            <section id="view-login" class="hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+                        🔒 Acesso Restrito
+                    </span>
+                    <a
+                        href="?"
+                        class="text-xs font-medium text-slate-400 hover:text-indigo-600 transition"
+                    >
+                        &larr; Voltar ao Diretório
+                    </a>
+                </div>
+
+                <div class="text-center space-y-2 pt-1">
+                    <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md">
+                        <svg class="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-900">Login de Administrador</h1>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Introduza as suas credenciais de administração para aceder ao <strong>Backoffice GoReview</strong>.
+                    </p>
+                </div>
+
+                <form id="login-form" class="space-y-4" novalidate>
+                    <div>
+                        <label for="login-username" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Utilizador <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="login-username"
+                                name="username"
+                                required
+                                autocomplete="username"
+                                placeholder="Ex: admin"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="login-password" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                            Palavra-passe <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="password"
+                                id="login-password"
+                                name="password"
+                                required
+                                autocomplete="current-password"
+                                placeholder="••••••••••••"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 pl-3.5 pr-11 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                            />
+                            <button
+                                type="button"
+                                id="btn-toggle-password"
+                                aria-label="Mostrar ou ocultar palavra-passe"
+                                title="Mostrar/Ocultar palavra-passe"
+                                class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-700 transition"
+                            >
+                                <span id="toggle-password-icon" class="text-sm select-none">👁️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        id="login-error-alert"
+                        role="alert"
+                        class="hidden rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 text-xs text-rose-700 font-medium"
+                    ></div>
+
+                    <button
+                        type="submit"
+                        id="btn-login-submit"
+                        class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-indigo-600 active:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <span id="login-btn-text">Entrar no Portal Admin</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 3: PORTAL DE ADMINISTRAÇÃO INTERNA (CRUD CLIENTES)   -->
+            <!-- ========================================================== -->
+            <section id="view-admin" class="hidden space-y-6">
+                <!-- Cabeçalho do Portal Admin -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                                Backoffice Interno
+                            </span>
+                            <a href="?" class="text-xs font-medium text-slate-400 hover:text-indigo-600 transition">
+                                &larr; Ver Vista de Teste
+                            </a>
+                        </div>
+                        <h1 class="text-2xl font-bold text-slate-900 mt-1">Portal de Administração de Clientes</h1>
+                        <p class="text-xs text-slate-500">
+                            Crie novas empresas, ofereça o <strong>1º mês grátis (Período Experimental)</strong>, edite dados e exporte relatórios 3D.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button
+                            type="button"
+                            id="btn-open-create-client"
+                            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition"
+                        >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Novo Cliente</span>
+                        </button>
+                        <button
+                            type="button"
+                            id="btn-admin-logout"
+                            title="Terminar Sessão de Administrador"
+                            class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-600 font-semibold text-xs transition"
+                        >
+                            <span>🔒</span>
+                            <span>Sair</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumo Rápido (4 KPIs de Clientes: Total, Ativos, Experimental, Inativos) -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Empresas</p>
+                            <p id="admin-kpi-total" class="text-2xl font-bold text-slate-900 mt-0.5">0</p>
+                        </div>
+                        <span class="w-10 h-10 rounded-xl bg-slate-200/70 text-slate-700 flex items-center justify-center text-lg">🏢</span>
+                    </div>
+
+                    <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">Clientes Ativos</p>
+                            <p id="admin-kpi-active" class="text-2xl font-bold text-emerald-600 mt-0.5">0</p>
+                        </div>
+                        <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">✅</span>
+                    </div>
+
+                    <div class="rounded-xl border border-violet-200/80 bg-violet-50/60 p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-violet-700">1º Mês Grátis</p>
+                            <p id="admin-kpi-trial" class="text-2xl font-bold text-violet-600 mt-0.5">0</p>
+                        </div>
+                        <span class="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center text-lg">🎁</span>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Inativos</p>
+                            <p id="admin-kpi-inactive" class="text-2xl font-bold text-slate-500 mt-0.5">0</p>
+                        </div>
+                        <span class="w-10 h-10 rounded-xl bg-slate-200/70 text-slate-500 flex items-center justify-center text-lg">⏸️</span>
+                    </div>
+                </div>
+
+                <!-- Barra de Pesquisa e Filtro de Estado (Todos / Ativos / Experimental / Inativos) -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div class="relative flex-1">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                            type="text"
+                            id="admin-search-input"
+                            placeholder="Pesquisar cliente por nome, NIF ou categoria..."
+                            class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div class="inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-xs font-semibold gap-0.5">
+                        <button type="button" data-admin-filter="all" class="admin-filter-btn px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition">
+                            Todos
+                        </button>
+                        <button type="button" data-admin-filter="active" class="admin-filter-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            ✅ Ativos
+                        </button>
+                        <button type="button" data-admin-filter="trial" class="admin-filter-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            🎁 Experimental (1º Mês)
+                        </button>
+                        <button type="button" data-admin-filter="inactive" class="admin-filter-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            ⏸️ Inativos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela / Lista de Clientes Registados -->
+                <div class="rounded-2xl border border-slate-200 overflow-visible bg-white">
+                    <div id="admin-clients-list" class="divide-y divide-slate-100"></div>
+                </div>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 4: ERRO (NIF OU SLUG NÃO ENCONTRADO / INATIVO)       -->
+            <!-- ========================================================== -->
+            <section id="view-error" class="hidden py-8 text-center space-y-5">
+                <div class="mx-auto w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="space-y-2">
+                    <h1 class="text-lg font-bold text-slate-900">Empresa indisponível</h1>
+                    <p id="error-message" class="text-sm text-slate-500 leading-relaxed"></p>
+                </div>
+                <div class="pt-2 flex flex-wrap items-center justify-center gap-2">
+                    <a href="?"
+                       class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">
+                        Ver Empresas Ativas
+                    </a>
+                    <a href="?admin=true"
+                       class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                        Abrir Portal Admin
+                    </a>
+                </div>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 5: ECRÃ PRINCIPAL (AVALIAÇÃO + FILTRO ÉTICO)         -->
+            <!-- ========================================================== -->
+            <section id="view-main" class="hidden space-y-6">
+                <!-- Cabeçalho da Empresa -->
+                <div class="flex flex-col items-center text-center space-y-3">
+                    <div class="relative w-20 h-20 rounded-2xl bg-slate-100 border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center">
+                        <img id="client-logo" src="" alt="Logótipo" class="hidden w-full h-full object-cover" />
+                        <span id="client-initials" class="text-2xl font-bold text-indigo-600"></span>
+                    </div>
+
+                    <div class="space-y-1 w-full">
+                        <span id="client-nif-badge" class="hidden inline-block text-[11px] font-mono font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full"></span>
+
+                        <!-- Nome do Estabelecimento + Botão 3 Pontinhos (⋯) em frente ao nome -->
+                        <div class="relative flex items-center justify-center gap-1.5">
+                            <h1 id="client-name" class="text-2xl font-bold text-slate-900 tracking-tight"></h1>
+
+                            <div class="relative inline-block text-left">
+                                <button
+                                    type="button"
+                                    id="main-client-menu-btn"
+                                    title="Opções e Relatório Mensal"
+                                    aria-label="Opções do estabelecimento"
+                                    class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                                >
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                    </svg>
+                                </button>
+
+                                <div
+                                    id="main-client-dropdown"
+                                    class="hidden absolute right-0 mt-1.5 w-60 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-slate-200 divide-y divide-slate-100 z-30"
+                                >
+                                    <div class="px-3 py-2 bg-slate-50/70 rounded-t-xl">
+                                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Relatório Mensal 3D</p>
+                                    </div>
+                                    <div class="py-1">
+                                        <button type="button" data-report-action="open" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition text-left">
+                                            <span>📊</span>
+                                            <span>Ver Relatório & Gráficos 3D</span>
+                                        </button>
+                                        <button type="button" data-report-action="pdf" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition text-left">
+                                            <span>🖨️</span>
+                                            <span>Exportar Relatório (PDF)</span>
+                                        </button>
+                                        <button type="button" data-report-action="csv" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition text-left">
+                                            <span>📥</span>
+                                            <span>Exportar Críticas (CSV / Excel)</span>
+                                        </button>
+                                        <button type="button" data-report-action="sql" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition text-left">
+                                            <span>🗄️</span>
+                                            <span>Exportar Relatório SQL (.sql)</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-sm text-slate-500">Como classifica a sua experiência connosco hoje?</p>
+                    </div>
+                </div>
+
+                <!-- Seletor de Classificação (1 a 5 Estrelas) -->
+                <div class="py-2 flex flex-col items-center space-y-3">
+                    <div id="stars-container" class="flex items-center justify-center gap-2 sm:gap-3" role="radiogroup" aria-label="Classificação de 1 a 5 estrelas">
+                        <button type="button" data-rating="1" aria-label="1 Estrela" class="star-btn p-1.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <svg class="w-10 h-10 text-slate-200 transition-all duration-150 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                        </button>
+                        <button type="button" data-rating="2" aria-label="2 Estrelas" class="star-btn p-1.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <svg class="w-10 h-10 text-slate-200 transition-all duration-150 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                        </button>
+                        <button type="button" data-rating="3" aria-label="3 Estrelas" class="star-btn p-1.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <svg class="w-10 h-10 text-slate-200 transition-all duration-150 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                        </button>
+                        <button type="button" data-rating="4" aria-label="4 Estrelas" class="star-btn p-1.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <svg class="w-10 h-10 text-slate-200 transition-all duration-150 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                        </button>
+                        <button type="button" data-rating="5" aria-label="5 Estrelas" class="star-btn p-1.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <svg class="w-10 h-10 text-slate-200 transition-all duration-150 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <p id="rating-label" class="text-xs font-medium text-slate-400 h-4 text-center">
+                        Toque numa estrela para classificar de 1 a 5
+                    </p>
+                </div>
+
+                <!-- Caixa de Reclamações Interna (Exibida quando a nota é 1, 2 ou 3 Estrelas) -->
+                <div id="private-feedback-section" class="hidden pt-5 border-t border-slate-100">
+                    <div class="mb-4 bg-rose-50/70 border border-rose-200/80 rounded-xl p-3.5 text-left">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-rose-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <p class="text-xs font-bold text-rose-950 uppercase tracking-wide">Caixa de Reclamações Interna</p>
+                        </div>
+                        <p class="text-xs text-rose-800 mt-1 leading-relaxed">
+                            Lamentamos que a sua experiência não tenha sido positiva. A sua reclamação será encaminhada diretamente à gerência para resolução imediata.
+                        </p>
+                    </div>
+
+                    <form id="private-feedback-form" class="space-y-4" novalidate>
+                        <div>
+                            <label for="feedback-comment" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Descreva a sua reclamação ou o que correu menos bem <span class="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                id="feedback-comment"
+                                rows="3"
+                                required
+                                placeholder="Explique-nos o sucedido para podermos resolver..."
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15 transition"
+                            ></textarea>
+                        </div>
+
+                        <div>
+                            <label for="feedback-contact" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Contacto (opcional, caso deseje acompanhamento do gerente)
+                            </label>
+                            <input
+                                type="text"
+                                id="feedback-contact"
+                                placeholder="Telemóvel ou e-mail"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15 transition"
+                            />
+                        </div>
+
+                        <p id="form-error-alert" class="hidden text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></p>
+
+                        <button
+                            type="submit"
+                            id="submit-feedback-btn"
+                            class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2"
+                        >
+                            <span id="submit-btn-text">Submeter na Caixa de Reclamações</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 6: REDIRECIONAMENTO GOOGLE MAPS (4 OU 5 ESTRELAS)    -->
+            <!-- ========================================================== -->
+            <section id="view-redirecting" class="hidden py-10 text-center space-y-5">
+                <div class="mx-auto w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <div class="space-y-2">
+                    <h2 class="text-xl font-bold text-slate-900">Obrigado pela avaliação positiva!</h2>
+                    <p class="text-sm text-slate-500">
+                        Estamos a redirecioná-lo para o <strong>Google Maps</strong> oficial da empresa...
+                    </p>
+                </div>
+                <div class="pt-2">
+                    <a id="manual-google-link" href="#" rel="noopener noreferrer"
+                       class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline">
+                        Clique aqui se não for redirecionado automaticamente
+                    </a>
+                </div>
+            </section>
+
+            <!-- ========================================================== -->
+            <!-- VISTA 7: CONFIRMAÇÃO DA CAIXA DE RECLAMAÇÕES (1-3 ESTRELAS)-->
+            <!-- ========================================================== -->
+            <section id="view-thank-you" class="hidden py-10 text-center space-y-4">
+                <div class="mx-auto w-14 h-14 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900">Reclamação Registada</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    A sua mensagem foi registada na <strong>Caixa de Reclamações Interna</strong> e enviada diretamente à gerência para resolução.
+                </p>
+                <div class="pt-2">
+                    <a href="?" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline">
+                        &larr; Voltar às empresas de teste
+                    </a>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- ================================================================== -->
+    <!-- MODAL FORMULÁRIO DE CRIAR / EDITAR CLIENTE (PORTAL ADMIN)          -->
+    <!-- ================================================================== -->
+    <div
+        id="client-form-modal"
+        class="hidden no-print fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Gestão de Estabelecimento</span>
+                    <h2 id="client-form-title" class="text-lg font-bold text-slate-900">Novo Cliente</h2>
+                </div>
+                <button
+                    type="button"
+                    id="btn-close-client-form"
+                    aria-label="Fechar formulário"
+                    class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition"
+                >
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="admin-client-form" class="p-6 space-y-4" novalidate>
+                <input type="hidden" id="client-field-id" />
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="client-field-name" class="block text-xs font-semibold text-slate-700 mb-1">
+                            Nome do Estabelecimento <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="client-field-name"
+                            required
+                            placeholder="Ex: Pizzaria Bella Napoli"
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="client-field-nif" class="block text-xs font-semibold text-slate-700 mb-1">
+                            NIF da Empresa <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="client-field-nif"
+                            required
+                            maxlength="15"
+                            placeholder="Ex: 515222333"
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-mono text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div>
+                        <label for="client-field-category" class="block text-xs font-semibold text-slate-700 mb-1">
+                            Setor / Categoria
+                        </label>
+                        <input
+                            type="text"
+                            id="client-field-category"
+                            placeholder="Ex: Restauração & Pizzas"
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="client-field-slug" class="block text-xs font-semibold text-slate-700 mb-1">
+                            Identificador URL (Slug) <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="client-field-slug"
+                            required
+                            placeholder="Ex: pizzaria-bella-napoli"
+                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-mono text-slate-700 focus:bg-white focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="client-field-google-url" class="block text-xs font-semibold text-slate-700 mb-1">
+                            Link Oficial de Avaliação Google Maps <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="url"
+                            id="client-field-google-url"
+                            required
+                            placeholder="https://search.google.com/local/writereview?placeid=..."
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="client-field-logo" class="block text-xs font-semibold text-slate-700 mb-1">
+                            URL do Logótipo (opcional)
+                        </label>
+                        <input
+                            type="url"
+                            id="client-field-logo"
+                            placeholder="https://exemplo.pt/logo.png"
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="client-field-email" class="block text-xs font-semibold text-slate-700 mb-1">
+                            E-mail Oficial do Cliente (para envio do Relatório Mensal)
+                        </label>
+                        <input
+                            type="email"
+                            id="client-field-email"
+                            placeholder="Ex: marcoacteodoro@hotmail.com"
+                            class="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        />
+                    </div>
+
+                    <!-- Seletor de Estado (Ativo / Período Experimental 1 Mês Grátis / Inativo) -->
+                    <div class="sm:col-span-2">
+                        <label for="client-field-status" class="block text-xs font-semibold text-slate-700 mb-1">
+                            Estado do Serviço / Subscrição
+                        </label>
+                        <select
+                            id="client-field-status"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/15"
+                        >
+                            <option value="trial">🎁 Período Experimental (1º Mês Grátis — 30 dias)</option>
+                            <option value="active">✅ Ativo (Subscrição Mensal Ativa)</option>
+                            <option value="inactive">⏸️ Inativo / Suspenso (Tag NFC Bloqueada)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Pré-visualização automática do Link para gravar na Tag NFC -->
+                <div class="rounded-xl bg-indigo-50/70 border border-indigo-100 p-3 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Link Gerado para a Tag NFC</p>
+                        <p id="client-nfc-preview" class="text-xs font-mono text-indigo-950 truncate mt-0.5">?nif=...</p>
+                    </div>
+                </div>
+
+                <p id="client-form-error" class="hidden text-xs font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></p>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button
+                        type="button"
+                        id="btn-cancel-client-form"
+                        class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        id="btn-save-client"
+                        class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition"
+                    >
+                        Guardar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL DE RELATÓRIO MENSAL DA EMPRESA (GRÁFICOS 3D + FEEDBACK + SQL)-->
+    <!-- ================================================================== -->
+    <div
+        id="report-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div
+            id="report-modal-panel"
+            class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto flex flex-col"
+        >
+            <!-- Cabeçalho do Relatório -->
+            <div class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <img id="report-client-logo" src="" alt="" class="w-12 h-12 rounded-xl object-cover border border-slate-200 bg-slate-100" />
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                Relatório Mensal GoReview
+                            </span>
+                            <span id="report-client-nif" class="text-xs font-mono text-slate-500"></span>
+                        </div>
+                        <h2 id="report-client-name" class="text-lg sm:text-xl font-bold text-slate-900 mt-0.5"></h2>
+                    </div>
+                </div>
+
+                <!-- Controlos de Filtro e Exportação -->
+                <div class="flex flex-wrap items-center gap-2 no-print">
+                    <select
+                        id="report-month-select"
+                        aria-label="Selecionar período do relatório"
+                        class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        <option value="2026-10">Outubro 2026</option>
+                        <option value="all">Todo o Histórico</option>
+                    </select>
+
+                    <button
+                        type="button"
+                        id="btn-send-email-report"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition"
+                        title="Enviar Relatório Executivo por E-mail com PDF em Anexo"
+                    >
+                        <span>✉️</span>
+                        <span>Enviar por E-mail</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-export-pdf"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition"
+                    >
+                        <span>🖨️</span>
+                        <span>Imprimir / PDF</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-export-csv"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
+                    >
+                        <span>📥</span>
+                        <span>CSV</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-export-sql"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                    >
+                        <span>🗄️</span>
+                        <span>SQL</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-close-report"
+                        aria-label="Fechar relatório"
+                        class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                    >
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Corpo do Relatório -->
+            <div class="p-6 space-y-6">
+                <!-- 1. Cartões de Métricas (KPIs) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                    <div class="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total de Avaliações</p>
+                        <p id="kpi-total" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Interações registadas</p>
+                    </div>
+
+                    <div class="rounded-xl border border-amber-200/80 bg-amber-50/50 p-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-amber-700">Média Global</p>
+                        <p id="kpi-average" class="text-2xl font-bold text-amber-600 mt-1">0.0 ★</p>
+                        <p class="text-[11px] text-amber-800/80 mt-0.5">Escala de 1 a 5 estrelas</p>
+                    </div>
+
+                    <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">Google Maps (4–5★)</p>
+                        <p id="kpi-positive" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+                        <p id="kpi-positive-rate" class="text-[11px] text-emerald-800/80 mt-0.5">0% redirecionadas</p>
+                    </div>
+
+                    <div class="rounded-xl border border-rose-200/80 bg-rose-50/50 p-4">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-rose-700">Críticas Retidas (1–3★)</p>
+                        <p id="kpi-complaints" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+                        <p class="text-[11px] text-rose-800/80 mt-0.5">Caixa de Reclamações</p>
+                    </div>
+                </div>
+
+                <!-- 2. Gráficos 3D estilo Excel -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="rounded-2xl border border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50/80 shadow-xs">
+                        <div class="mb-2 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Distribuição por Classificação (Colunas 3D)</h3>
+                                <p class="text-xs text-slate-500">Volume de avaliações de 1★ a 5★ em perspetiva 3D</p>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">3D Excel</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="chart-stars-bar" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 p-4 bg-gradient-to-b from-white to-slate-50/80 shadow-xs">
+                        <div class="mb-2 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Eficácia do Filtro Ético (Circular 3D)</h3>
+                                <p class="text-xs text-slate-500">Google Maps (4–5★) vs. Caixa de Reclamações (1–3★)</p>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">3D Pie</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="chart-filter-doughnut" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Lista de Críticas e Feedbacks Recebidos (Caixa de Reclamações) -->
+                <div class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+                    <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Críticas e Feedbacks Recebidos (Caixa de Reclamações)</h3>
+                            <p class="text-xs text-slate-500">Mensagens privadas enviadas por clientes com classificação de 1 a 3 estrelas</p>
+                        </div>
+                        <button
+                            type="button"
+                            id="btn-mailto-client"
+                            class="no-print inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/70 transition"
+                        >
+                            <span>✉️</span>
+                            <span>Enviar Resumo por E-mail</span>
+                        </button>
+                    </div>
+
+                    <div id="report-complaints-container" class="divide-y divide-slate-100"></div>
+                </div>
+
+                <!-- 4. Consulta SQL Geradora do Relatório -->
+                <details class="no-print group rounded-2xl border border-slate-200 bg-slate-900 text-slate-100 overflow-hidden">
+                    <summary class="cursor-pointer px-5 py-3 text-xs font-semibold flex items-center justify-between hover:bg-slate-800 transition">
+                        <span class="flex items-center gap-2">
+                            <span>🗄️</span>
+                            <span>Ver Consulta SQL do Relatório (Supabase / PostgreSQL)</span>
+                        </span>
+                        <span class="text-slate-400 group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <div class="p-4 border-t border-slate-800 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] text-slate-400">Pode executar esta query diretamente no SQL Editor do Supabase:</span>
+                            <button
+                                type="button"
+                                id="btn-copy-sql"
+                                class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition"
+                            >
+                                Copiar SQL
+                            </button>
+                        </div>
+                        <pre id="report-sql-code" class="text-[11px] font-mono text-emerald-300 bg-slate-950 p-3.5 rounded-xl overflow-x-auto leading-relaxed"></pre>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL EXECUTIVO: DISPARO DE RELATÓRIO POR E-MAIL                   -->
+    <!-- ================================================================== -->
+    <div
+        id="email-dispatch-modal"
+        class="hidden no-print fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <!-- Cabeçalho do Modal de E-mail -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg">
+                        ✉️
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300">Comunicação Oficial GoReview</span>
+                        <h2 class="text-base sm:text-lg font-bold text-white">Enviar Relatório Executivo ao Cliente</h2>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    id="btn-close-email-modal"
+                    aria-label="Fechar janela de envio"
+                    class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4">
+                <!-- Informações do Destinatário & Assunto -->
+                <div class="space-y-3 bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                    <div>
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Destinatário Oficial</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold text-slate-900 font-mono" id="email-modal-recipient">marcoacteodoro@hotmail.com</span>
+                            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Validado</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Assunto da Mensagem</span>
+                        <p class="text-xs font-semibold text-slate-800" id="email-modal-subject"></p>
+                    </div>
+
+                    <div>
+                        <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Ficheiro em Anexo</span>
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-medium">
+                            <span>📄</span>
+                            <span id="email-modal-pdf-name" class="font-mono font-semibold">Relatorio-GoReview-Cafe-Central-Lisboa-2026-10.pdf</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado do Envio Automático -->
+                <div id="email-send-status-alert" class="hidden rounded-xl p-3.5 text-xs font-semibold" role="alert"></div>
+
+                <!-- Aviso Educacional e Transparência Técnica -->
+                <div class="rounded-xl bg-indigo-50/80 border border-indigo-200/70 p-3.5 flex items-start gap-3">
+                    <span class="text-lg flex-shrink-0">⚡</span>
+                    <p class="text-xs text-indigo-950 leading-relaxed">
+                        <strong>Envio Automático Ativo via Gmail:</strong> Clique em <strong>"Enviar Automático"</strong> para disparar a mensagem em segundo plano a partir de <strong>reviewgo29@gmail.com</strong> diretamente para a caixa de entrada do cliente. Também pode abrir no seu programa local ou descarregar o PDF.
+                    </p>
+                </div>
+
+                <!-- Pré-visualização do Corpo do E-mail -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-bold text-slate-700">Pré-visualização do Texto Executivo:</label>
+                        <span id="email-copy-feedback" class="text-[11px] font-semibold text-emerald-600 hidden">Copiado com sucesso!</span>
+                    </div>
+                    <pre
+                        id="email-modal-body"
+                        class="w-full h-44 rounded-xl border border-slate-200 bg-slate-950 text-slate-200 p-3 text-[11px] font-mono whitespace-pre-wrap overflow-y-auto leading-relaxed select-all"
+                    ></pre>
+                </div>
+
+                <!-- Ações Principais -->
+                <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-slate-100">
+                    <button
+                        type="button"
+                        id="btn-download-report-pdf"
+                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition"
+                    >
+                        <span>📥</span>
+                        <span>Descarregar PDF</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-copy-email-body"
+                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition"
+                    >
+                        <span>📋</span>
+                        <span>Copiar Texto</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        id="btn-auto-send-gmail"
+                        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition"
+                    >
+                        <span>⚡</span>
+                        <span id="auto-send-gmail-text">Enviar Automático (Gmail)</span>
+                    </button>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé Discreto -->
+    <footer class="py-4 text-center text-xs text-slate-400 no-print">
+        Powered by <span class="font-semibold text-slate-500">GoReview</span> &bull;
+        <a href="?admin=true" class="hover:text-indigo-600 underline">Portal Admin</a>
+    </footer>
+
+    <!-- Entrypoint ES6 Modules (Clean Architecture) -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

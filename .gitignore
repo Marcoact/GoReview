@@ -1,0 +1,16 @@
+# Dependências
+node_modules/
+package-lock.json
+
+# Ambiente e Logs
+.env
+*.log
+npm-debug.log*
+
+# Ficheiros do Sistema Operativo
+Thumbs.db
+.DS_Store
+
+# Ficheiros temporários e de teste
+scratch/
+tmp/
