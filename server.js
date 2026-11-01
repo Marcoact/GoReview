@@ -225,11 +225,12 @@ function generateReportPdfBuffer(reportData) {
  * @param {string} options.to - Destinatário
  * @param {string} options.subject - Assunto
  * @param {string} options.body - Corpo de texto
+ * @param {string} [options.htmlBody] - Corpo opcional em HTML com botões interativos
  * @param {string} [options.pdfBase64] - Conteúdo base64 do anexo
  * @param {string} [options.pdfFilename] - Nome do ficheiro em anexo
  * @returns {Promise<{ success: boolean, message: string }>}
  */
-function sendGmailSmtp({ to, subject, body, pdfBase64, pdfFilename }) {
+function sendGmailSmtp({ to, subject, body, htmlBody, pdfBase64, pdfFilename }) {
     return new Promise((resolve, reject) => {
         const socket = tls.connect({
             host: 'smtp.gmail.com',
@@ -279,21 +280,41 @@ function sendGmailSmtp({ to, subject, body, pdfBase64, pdfFilename }) {
                 const dateHeader = new Date().toUTCString();
 
                 let message = '';
-                message += `From: "GoReview Reports" <${GMAIL_USER}>\r\n`;
+                message += `From: "GoReview Alertas" <${GMAIL_USER}>\r\n`;
                 message += `To: <${to}>\r\n`;
                 message += `Reply-To: <${GMAIL_USER}>\r\n`;
                 message += `Date: ${dateHeader}\r\n`;
                 message += `Message-ID: ${messageId}\r\n`;
-                message += `X-Mailer: GoReview Executive Engine 1.0\r\n`;
+                message += `X-Mailer: GoReview Alert Engine 1.0\r\n`;
                 message += `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=\r\n`;
                 message += `MIME-Version: 1.0\r\n`;
                 message += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`;
 
-                // Corpo de texto
-                message += `--${boundary}\r\n`;
-                message += `Content-Type: text/plain; charset=utf-8\r\n`;
-                message += `Content-Transfer-Encoding: 8bit\r\n\r\n`;
-                message += body + '\r\n\r\n';
+                // Conteúdo do e-mail: Multipart Alternative se houver HTML, ou Text puro
+                if (htmlBody) {
+                    const altBoundary = '----=_GoReviewAlt_' + Date.now();
+                    message += `--${boundary}\r\n`;
+                    message += `Content-Type: multipart/alternative; boundary="${altBoundary}"\r\n\r\n`;
+
+                    // Versão Plain Text
+                    message += `--${altBoundary}\r\n`;
+                    message += `Content-Type: text/plain; charset=utf-8\r\n`;
+                    message += `Content-Transfer-Encoding: 8bit\r\n\r\n`;
+                    message += body + '\r\n\r\n';
+
+                    // Versão HTML
+                    message += `--${altBoundary}\r\n`;
+                    message += `Content-Type: text/html; charset=utf-8\r\n`;
+                    message += `Content-Transfer-Encoding: 8bit\r\n\r\n`;
+                    message += htmlBody + '\r\n\r\n';
+
+                    message += `--${altBoundary}--\r\n\r\n`;
+                } else {
+                    message += `--${boundary}\r\n`;
+                    message += `Content-Type: text/plain; charset=utf-8\r\n`;
+                    message += `Content-Transfer-Encoding: 8bit\r\n\r\n`;
+                    message += body + '\r\n\r\n';
+                }
 
                 // Anexo PDF opcional
                 if (pdfBase64 && pdfFilename) {
@@ -403,6 +424,107 @@ const server = http.createServer((req, res) => {
                 console.error('[API] Falha no envio do e-mail:', err);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: err.message || 'Falha ao enviar e-mail via Gmail SMTP.' }));
+            }
+        });
+        return;
+    }
+
+    // ROTA DA API: Alerta Instantâneo de Reclamação com Ação WhatsApp
+    if (pathname === '/api/send-complaint-alert' && req.method === 'POST') {
+        let bodyRaw = '';
+        req.on('data', (chunk) => bodyRaw += chunk);
+        req.on('end', async () => {
+            try {
+                const payload = JSON.parse(bodyRaw || '{}');
+                const businessName = (payload.businessName || 'Estabelecimento').trim();
+                const businessEmail = (payload.businessEmail || GMAIL_USER).trim();
+                const rating = Number(payload.rating) || 1;
+                const comment = (payload.comment || 'Sem comentário escrito.').trim();
+                const customerContact = (payload.customerContact || '').trim();
+
+                // Deteção inteligente de telemóvel para WhatsApp (ex: 912345678 -> 351912345678)
+                const digits = customerContact.replace(/\D/g, '');
+                let cleanPhone = null;
+                let waUrl = null;
+                if (digits.length >= 9) {
+                    cleanPhone = digits.length === 9 ? `351${digits}` : digits;
+                    const waText = encodeURIComponent(
+                        `Olá! Somos da gerência do ${businessName}. Lemos o seu comentário e gostaríamos de pedir as mais sinceras desculpas pelo sucedido. Como podemos compensar a sua experiência connosco?`
+                    );
+                    waUrl = `https://wa.me/${cleanPhone}?text=${waText}`;
+                }
+
+                const starsText = '⭐'.repeat(rating);
+                const subject = `🚨 [Alerta Crítico GoReview] Nova Reclamação – ${businessName} (${rating}★)`;
+
+                // Corpo em Texto Puro
+                let textBody = `🚨 ALERTA CRÍTICO GOREVIEW — NOVA RECLAMAÇÃO PRIVADA\n\n`;
+                textBody += `Estabelecimento: ${businessName}\n`;
+                textBody += `Classificação: ${rating} de 5 Estrelas (${starsText})\n`;
+                textBody += `Data e Hora: ${new Date().toLocaleString('pt-PT')}\n\n`;
+                textBody += `----------------------------------------------------------------------\n`;
+                textBody += `MENSAGEM DO CLIENTE:\n"${comment}"\n`;
+                textBody += `----------------------------------------------------------------------\n\n`;
+                textBody += `CONTACTO DO CLIENTE: ${customerContact || 'Sem contacto facultado'}\n\n`;
+                if (waUrl) {
+                    textBody += `👉 RESPONDER IMEDIATAMENTE VIA WHATSAPP:\n${waUrl}\n\n`;
+                }
+                textBody += `🔒 Esta crítica NÃO foi publicada no Google Maps. Foi retida no seu canal confidencial GoReview.\n`;
+                textBody += `Aceda ao Portal de Administração para gerir as reclamações: http://localhost:3001/?admin=true\n`;
+
+                // Corpo em HTML de Alto Impacto com Botão de 1 Clique para WhatsApp
+                let htmlBody = `
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+                    <div style="background-color: #0f172a; padding: 24px; text-align: center; border-bottom: 3px solid #ef4444;">
+                        <span style="display: inline-block; background-color: #fee2e2; color: #991b1b; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 9999px; margin-bottom: 8px;">🚨 Alerta Crítico GoReview</span>
+                        <h1 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 0;">Nova Reclamação Privada Registada</h1>
+                        <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0;">${businessName}</p>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="margin-bottom: 8px;">
+                                <span style="font-size: 16px; font-weight: bold; color: #9f1239;">Classificação: ${starsText} (${rating}★)</span>
+                                <span style="display: inline-block; margin-left: 8px; font-size: 11px; color: #e11d48; font-weight: 600; background: #ffe4e6; padding: 2px 8px; border-radius: 6px;">Retida no Filtro Confidencial</span>
+                            </div>
+                            <p style="font-size: 15px; color: #1e293b; line-height: 1.5; margin: 10px 0; font-style: italic;">"${comment}"</p>
+                        </div>
+                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Contacto Indicado pelo Cliente</span>
+                            <p style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 6px 0 0 0;">${customerContact || 'Sem contacto facultado'}</p>
+                        </div>
+                        ${waUrl ? `
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <a href="${waUrl}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3);">
+                                💬 Responder no WhatsApp com 1 Clique
+                            </a>
+                            <p style="font-size: 11px; color: #64748b; margin-top: 8px;">Abre a conversa no WhatsApp já com mensagem de recuperação pré-escrita.</p>
+                        </div>
+                        ` : ''}
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 12px; color: #64748b; line-height: 1.6;">
+                            <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google Maps e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
+                            <p style="margin: 0;">⏱️ <strong>Compromisso de Resposta:</strong> O cliente foi informado de uma resolução em até 7 dias.</p>
+                        </div>
+                    </div>
+                    <div style="background-color: #f8fafc; padding: 12px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+                        GoReview — Gestão Inteligente de Reputação NFC & Google Maps
+                    </div>
+                </div>
+                `;
+
+                console.log(`[ALERTA] A disparar alerta de reclamação para ${businessEmail}...`);
+                const result = await sendGmailSmtp({
+                    to: businessEmail,
+                    subject,
+                    body: textBody,
+                    htmlBody
+                });
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            } catch (err) {
+                console.error('[ALERTA] Falha ao disparar alerta de reclamação:', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err.message || 'Falha ao enviar alerta de reclamação.' }));
             }
         });
         return;

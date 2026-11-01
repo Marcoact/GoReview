@@ -120,12 +120,84 @@ export class App {
 
             this.#currentBusiness = business;
             this.#ui.renderBusinessProfile(business);
+            this.#ui.setSentimentSelection(null);
+            this.#ui.togglePrivateFeedbackForm(false);
+            this.#bindSentimentListeners();
             this.#bindStarRatingListeners();
             this.#bindPrivateFeedbackFormListener();
             this.#ui.showView('main');
         } catch (fatalError) {
             Logger.error('App', 'Erro crítico durante a inicialização da aplicação:', fatalError);
             this.#ui.showError('Ocorreu um erro inesperado ao iniciar a aplicação.');
+        }
+    }
+
+    /**
+     * Liga os ouvintes dos botões de sentimento conversacional ("Sim, foi excelente!" e "Poderia ter sido melhor...").
+     * @returns {void}
+     */
+    #bindSentimentListeners() {
+        const { btnSentimentPositive, btnSentimentNegative } = this.#ui.elements;
+
+        if (btnSentimentPositive && !btnSentimentPositive.dataset.bound) {
+            btnSentimentPositive.dataset.bound = 'true';
+            btnSentimentPositive.addEventListener('click', async () => {
+                if (this.#isSubmitting) return;
+                await this.#handleSentimentSelection('positive');
+            });
+        }
+
+        if (btnSentimentNegative && !btnSentimentNegative.dataset.bound) {
+            btnSentimentNegative.dataset.bound = 'true';
+            btnSentimentNegative.addEventListener('click', async () => {
+                if (this.#isSubmitting) return;
+                await this.#handleSentimentSelection('negative');
+            });
+        }
+    }
+
+    /**
+     * Processa a escolha de sentimento do cliente (Filtro Ético Conversacional).
+     * @param {'positive'|'negative'} type - Tipo de sentimento escolhido.
+     * @returns {Promise<void>}
+     */
+    async #handleSentimentSelection(type) {
+        try {
+            if (!this.#currentBusiness) return;
+
+            if (type === 'positive') {
+                this.#selectedRating = 5;
+                this.#ui.setSentimentSelection('positive');
+                this.#ui.togglePrivateFeedbackForm(false);
+                this.#ui.setFeedbackFormError(null);
+                this.#isSubmitting = true;
+
+                Logger.info('App', `Cliente escolheu "Sim, foi excelente!" -> Redirecionamento 5★ para Google Maps de ${this.#currentBusiness.name}`);
+                this.#ui.showRedirectingView(this.#currentBusiness.googleReviewUrl);
+
+                const positiveReview = new Review({
+                    businessId: this.#currentBusiness.id,
+                    rating: 5,
+                    comment: null,
+                    customerContact: null,
+                    redirectedToGoogle: true
+                });
+
+                await this.#reviewService.submitReview(positiveReview);
+                this.#router.redirectTo(this.#currentBusiness.googleReviewUrl, ENV.REDIRECT_DELAY_MS);
+                return;
+            }
+
+            if (type === 'negative') {
+                this.#selectedRating = 2;
+                this.#ui.setSentimentSelection('negative');
+                this.#ui.setFeedbackFormError(null);
+                this.#ui.togglePrivateFeedbackForm(true);
+                Logger.info('App', `Cliente escolheu "Poderia ter sido melhor..." -> Caixa de Reclamações Interna aberta para ${this.#currentBusiness.name}`);
+            }
+        } catch (error) {
+            Logger.error('App', 'Erro ao processar seleção de sentimento:', error);
+            this.#isSubmitting = false;
         }
     }
 
@@ -248,6 +320,16 @@ export class App {
                     );
                     return;
                 }
+
+                // Disparo em tempo real do Alerta Crítico para o Proprietário com atalho WhatsApp
+                this.#emailService.sendComplaintAlert({
+                    business: this.#currentBusiness,
+                    rating: this.#selectedRating,
+                    comment: sanitizedComment,
+                    customerContact: sanitizedContact || null
+                }).catch((alertErr) => {
+                    Logger.warn('App', 'Erro ao processar disparo de alerta em tempo real:', alertErr);
+                });
 
                 this.#ui.showView('thankYou');
             } catch (error) {
@@ -854,9 +936,9 @@ export class App {
 }
 
 // ============================================================================
-// BOOTSTRAPPER (INJEÇÃO DE DEPENDÊNCIAS)
+// BOOTSTRAPPER (INJEÇÃO DE DEPENDÊNCIAS RESILIENTE A QUALQUER SERVIDOR/LIVE SERVER)
 // ============================================================================
-document.addEventListener('DOMContentLoaded', () => {
+const bootstrap = () => {
     try {
         const supabaseSingleton = SupabaseClient.getInstance();
         const router = new Router(window.location.search);
@@ -879,4 +961,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (bootstrapError) {
         Logger.error('Bootstrapper', 'Falha crítica no arranque dos módulos:', bootstrapError);
     }
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+    bootstrap();
+}

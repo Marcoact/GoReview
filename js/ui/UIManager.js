@@ -47,9 +47,13 @@ export class UIManager {
             clientNifBadge: document.getElementById('client-nif-badge'),
             mainClientMenuBtn: document.getElementById('main-client-menu-btn'),
             mainClientDropdown: document.getElementById('main-client-dropdown'),
+            btnSentimentPositive: document.getElementById('btn-sentiment-positive'),
+            btnSentimentNegative: document.getElementById('btn-sentiment-negative'),
+            sentimentContainer: document.getElementById('sentiment-selector-container'),
+            sentimentHelpLabel: document.getElementById('sentiment-help-label'),
             starsContainer: document.getElementById('stars-container'),
             starButtons: document.querySelectorAll('.star-btn'),
-            ratingLabel: document.getElementById('rating-label'),
+            ratingLabel: document.getElementById('rating-label') || document.getElementById('sentiment-help-label'),
             feedbackSection: document.getElementById('private-feedback-section'),
             feedbackForm: document.getElementById('private-feedback-form'),
             feedbackComment: document.getElementById('feedback-comment'),
@@ -272,6 +276,52 @@ export class UIManager {
     }
 
     /**
+     * Atualiza o estado visual dos botões de sentimento conversacional ('positive', 'negative' ou null).
+     * @param {'positive'|'negative'|null} sentiment - Sentimento selecionado.
+     * @returns {void}
+     */
+    setSentimentSelection(sentiment) {
+        const { btnSentimentPositive, btnSentimentNegative, sentimentHelpLabel } = this.elements;
+
+        if (btnSentimentPositive) {
+            if (sentiment === 'positive') {
+                btnSentimentPositive.classList.add('ring-4', 'ring-emerald-400/50', 'border-emerald-500', 'bg-emerald-50');
+                btnSentimentPositive.classList.remove('opacity-60');
+            } else if (sentiment === 'negative') {
+                btnSentimentPositive.classList.remove('ring-4', 'ring-emerald-400/50', 'border-emerald-500', 'bg-emerald-50');
+                btnSentimentPositive.classList.add('opacity-60');
+            } else {
+                btnSentimentPositive.classList.remove('ring-4', 'ring-emerald-400/50', 'border-emerald-500', 'bg-emerald-50', 'opacity-60');
+            }
+        }
+
+        if (btnSentimentNegative) {
+            if (sentiment === 'negative') {
+                btnSentimentNegative.classList.add('ring-4', 'ring-amber-400/50', 'border-amber-500', 'bg-amber-50');
+                btnSentimentNegative.classList.remove('opacity-60');
+            } else if (sentiment === 'positive') {
+                btnSentimentNegative.classList.remove('ring-4', 'ring-amber-400/50', 'border-amber-500', 'bg-amber-50');
+                btnSentimentNegative.classList.add('opacity-60');
+            } else {
+                btnSentimentNegative.classList.remove('ring-4', 'ring-amber-400/50', 'border-amber-500', 'bg-amber-50', 'opacity-60');
+            }
+        }
+
+        if (sentimentHelpLabel) {
+            if (sentiment === 'positive') {
+                sentimentHelpLabel.textContent = 'A preparar o seu redirecionamento para o Google Maps... ⭐';
+                sentimentHelpLabel.classList.add('text-emerald-600', 'font-medium');
+            } else if (sentiment === 'negative') {
+                sentimentHelpLabel.textContent = 'A sua mensagem será enviada confidencialmente à gerência.';
+                sentimentHelpLabel.classList.add('text-amber-600', 'font-medium');
+            } else {
+                sentimentHelpLabel.textContent = 'Toque numa opção para partilhar a sua opinião';
+                sentimentHelpLabel.classList.remove('text-emerald-600', 'text-amber-600', 'font-medium');
+            }
+        }
+    }
+
+    /**
      * Atualiza visualmente o destaque das estrelas de 1 a 5.
      * @param {number} activeRating - Número de estrelas ativas (0 a 5).
      * @returns {void}
@@ -312,7 +362,10 @@ export class UIManager {
         if (!this.elements.feedbackSection) return;
         this.elements.feedbackSection.classList.toggle('hidden', !visible);
         if (visible && this.elements.feedbackComment) {
-            this.elements.feedbackComment.focus();
+            setTimeout(() => {
+                this.elements.feedbackComment.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                this.elements.feedbackComment.focus();
+            }, 80);
         }
     }
 
@@ -726,7 +779,7 @@ export class UIManager {
         this.elements.kpiComplaints.textContent = String(report.complaintsCount);
         this.elements.reportSqlCode.textContent = report.sqlQuery;
 
-        this.#renderComplaintsListSafe(report.complaintsList);
+        this.#renderComplaintsListSafe(report.complaintsList, client?.name);
 
         this.elements.reportModal.classList.remove('hidden');
         requestAnimationFrame(() => {
@@ -739,7 +792,7 @@ export class UIManager {
      * @param {import('../models/Review.js').Review[]} complaints - Lista de reclamações (1-3 estrelas).
      * @returns {void}
      */
-    #renderComplaintsListSafe(complaints) {
+    #renderComplaintsListSafe(complaints, clientName = 'estabelecimento') {
         const container = this.elements.complaintsContainer;
         if (!container) return;
         container.replaceChildren();
@@ -788,7 +841,28 @@ export class UIManager {
             contactSpan.className = 'text-xs font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded';
             contactSpan.textContent = `Contacto: ${item.customerContact || 'Não indicado'}`;
 
-            topBar.append(leftGroup, contactSpan);
+            const rightGroup = document.createElement('div');
+            rightGroup.className = 'flex items-center gap-2';
+            rightGroup.appendChild(contactSpan);
+
+            const digitsOnly = String(item.customerContact || '').replace(/\D/g, '');
+            if (digitsOnly.length >= 9) {
+                const cleanPhone = digitsOnly.length === 9 ? `351${digitsOnly}` : digitsOnly;
+                const businessName = clientName || 'estabelecimento';
+                const waText = encodeURIComponent(
+                    `Olá! Somos da gerência do ${businessName}. Lemos o seu comentário confidencial e gostaríamos de pedir as mais sinceras desculpas pelo sucedido. Como podemos compensar a sua experiência?`
+                );
+                const waBtn = document.createElement('a');
+                waBtn.href = `https://wa.me/${cleanPhone}?text=${waText}`;
+                waBtn.target = '_blank';
+                waBtn.rel = 'noopener noreferrer';
+                waBtn.className =
+                    'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition';
+                waBtn.innerHTML = '<span>💬</span><span>WhatsApp</span>';
+                rightGroup.appendChild(waBtn);
+            }
+
+            topBar.append(leftGroup, rightGroup);
 
             const commentP = document.createElement('p');
             commentP.className = 'text-sm text-slate-800 leading-relaxed';

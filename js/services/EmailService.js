@@ -94,13 +94,34 @@ export class EmailService {
     }
 
     /**
+     * Resolve dinamicamente o endpoint da API para envio de e-mails ou alertas,
+     * garantindo suporte transparente em ambiente Localhost (3001/5500) e em Produção (Netlify Cloud Functions).
+     * @param {'send-email'|'send-complaint-alert'} action
+     * @returns {string}
+     */
+    static getApiEndpoint(action) {
+        if (typeof window !== 'undefined') {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isLocal && window.location.port === '3001') {
+                return `/api/${action}`;
+            }
+            if (isLocal) {
+                return `http://localhost:3001/api/${action}`;
+            }
+            // Em Produção HTTPS (Netlify) usa a Serverless Function relativa
+            return `/api/${action}`;
+        }
+        return `http://localhost:3001/api/${action}`;
+    }
+
+    /**
      * Envia o e-mail executivo de forma 100% automática através da API Gmail SMTP do servidor.
      * @param {Object} report - Objeto consolidado do relatório.
      * @returns {Promise<{ success: boolean, message: string, usedFallback?: boolean, emailData?: Object }>}
      */
     async sendAutomatedEmail(report) {
         const emailData = this.prepareReportEmail(report);
-        const endpoint = ENV.EMAIL_SERVICE?.API_ENDPOINT || 'http://localhost:3001/api/send-email';
+        const endpoint = EmailService.getApiEndpoint('send-email');
 
         try {
             Logger.info('EmailService', `A tentar envio automático via Gmail SMTP (${endpoint})...`);
@@ -158,6 +179,54 @@ export class EmailService {
                 usedFallback: true,
                 emailData
             };
+        }
+    }
+
+    /**
+     * Dispara um Alerta Crítico em Tempo Real para o e-mail do proprietário
+     * quando uma avaliação de 1 a 3 estrelas é submetida na Caixa de Reclamações.
+     * Inclui atalho de 1-clique para responder ao cliente via WhatsApp.
+     * @param {Object} params
+     * @param {import('../models/Business.js').Business} params.business
+     * @param {number} params.rating
+     * @param {string} params.comment
+     * @param {string|null} params.customerContact
+     * @returns {Promise<{ success: boolean, message: string }>}
+     */
+    async sendComplaintAlert({ business, rating, comment, customerContact }) {
+        const endpoint = EmailService.getApiEndpoint('send-complaint-alert');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        try {
+            Logger.info('EmailService', `A enviar alerta crítico de reclamação para ${business.email || 'gerência'}...`);
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    businessName: business.name,
+                    businessEmail: business.email || 'marcoacteodoro@hotmail.com',
+                    rating,
+                    comment,
+                    customerContact: customerContact || null
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                Logger.info('EmailService', 'Alerta crítico de reclamação enviado com sucesso:', data);
+                return { success: true, message: 'Alerta enviado ao proprietário com sucesso.' };
+            }
+
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Servidor respondeu com código ${response.status}`);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            Logger.warn('EmailService', 'Falha ao disparar alerta crítico para o proprietário:', err);
+            return { success: false, message: err.message };
         }
     }
 
