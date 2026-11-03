@@ -79,7 +79,7 @@ function generateReportPdfBuffer(reportData) {
     text(`${avgRating} / 5.0`, 178, startY + 42, { font: '/F2', size: 18, color: [0.05, 0.48, 0.28] });
 
     rect(300, startY, boxW, boxH, [0.95, 0.96, 1.0], [0.8, 0.82, 0.95]);
-    text('GOOGLE MAPS (4-5 Estrelas)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
+    text('OPINIOES NO GOOGLE (4-5★)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
     text(`${positiveCount} (${positiveRate}%)`, 310, startY + 42, { font: '/F2', size: 16, color: [0.25, 0.25, 0.65] });
 
     rect(432, startY, boxW + 4, boxH, [1.0, 0.96, 0.96], [0.95, 0.8, 0.8]);
@@ -153,7 +153,7 @@ function generateReportPdfBuffer(reportData) {
 
     // 6. Rodapé Oficial GoReview
     rect(36, 780, 524, 30, [0.97, 0.98, 1.0], [0.85, 0.88, 0.94]);
-    text('GoReview Reports - Documento confidencial gerado automaticamente pelo Sistema de Gestao Etica NFC & Google Maps.', 46, 794, {
+    text('GoReview Reports - Documento confidencial gerado automaticamente pelo Sistema GoReview de Gestao de Opinioes no Google.', 46, 794, {
         font: '/F1',
         size: 7,
         color: [0.4, 0.45, 0.55]

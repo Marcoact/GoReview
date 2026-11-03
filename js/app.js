@@ -172,7 +172,7 @@ export class App {
                 this.#ui.setFeedbackFormError(null);
                 this.#isSubmitting = true;
 
-                Logger.info('App', `Cliente escolheu "Sim, foi excelente!" -> Redirecionamento 5★ para Google Maps de ${this.#currentBusiness.name}`);
+                Logger.info('App', `Cliente escolheu "Sim, foi excelente!" -> Redirecionamento 5★ para Opinião no Google de ${this.#currentBusiness.name}`);
                 this.#ui.showRedirectingView(this.#currentBusiness.googleReviewUrl);
 
                 const positiveReview = new Review({
@@ -389,6 +389,10 @@ export class App {
                 }
 
                 if (targetBusiness) {
+                    if (action === 'qr') {
+                        this.#openQrModalForBusiness(targetBusiness);
+                        return;
+                    }
                     await this.#executeReportAction(targetBusiness, action);
                 }
                 return;
@@ -705,6 +709,16 @@ export class App {
                     return;
                 }
 
+                const qrBtn = e.target.closest('[data-qr-action="open"]');
+                if (qrBtn) {
+                    const nif = qrBtn.getAttribute('data-company-nif');
+                    const target = this.#adminBusinesses.find((b) => b.nif === nif);
+                    if (target) {
+                        this.#openQrModalForBusiness(target);
+                    }
+                    return;
+                }
+
                 const editBtn = e.target.closest('[data-admin-edit]');
                 if (editBtn) {
                     const id = editBtn.getAttribute('data-admin-edit');
@@ -725,6 +739,73 @@ export class App {
                 }
             });
         }
+
+        // Modal QR Code & Placa de Mesa Oficial
+        if (el.btnCloseQrModal) {
+            el.btnCloseQrModal.addEventListener('click', () => this.#ui.closeQrModal());
+        }
+
+        if (el.qrModal) {
+            el.qrModal.addEventListener('click', (e) => {
+                if (e.target === el.qrModal) this.#ui.closeQrModal();
+            });
+        }
+
+        if (el.btnCopyQrLink) {
+            el.btnCopyQrLink.addEventListener('click', async () => {
+                const url = el.qrModalUrlInput?.value;
+                if (!url) return;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    if (el.qrCopyFeedback) {
+                        el.qrCopyFeedback.classList.remove('hidden');
+                        setTimeout(() => el.qrCopyFeedback.classList.add('hidden'), 2000);
+                    }
+                } catch (_) {
+                    el.qrModalUrlInput.select();
+                    document.execCommand('copy');
+                }
+            });
+        }
+
+        if (el.btnDownloadQrPng) {
+            el.btnDownloadQrPng.addEventListener('click', () => {
+                if (!el.qrCodeCanvas) return;
+                const dataUrl = el.qrCodeCanvas.toDataURL('image/png');
+                const clientName = el.qrModalClientName?.textContent || 'empresa';
+                const safeName = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = `QRCode-GoReview-${safeName}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+        }
+
+        if (el.btnPrintTableStand) {
+            el.btnPrintTableStand.addEventListener('click', () => {
+                document.body.classList.add('printing-qr-stand');
+                window.print();
+                setTimeout(() => {
+                    document.body.classList.remove('printing-qr-stand');
+                }, 1000);
+            });
+        }
+    }
+
+    /**
+     * Prepara e abre o Modal de QR Code e Placa de Mesa Oficial para uma empresa.
+     * @param {import('./models/Business.js').Business} business - Empresa alvo.
+     * @returns {void}
+     */
+    #openQrModalForBusiness(business) {
+        // Obter URL oficial de produção para que as placas físicas impressas funcionem 100% online
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseOrigin = isLocal ? 'https://goreview-review.netlify.app' : window.location.origin;
+        const fullUrl = `${baseOrigin}/?nif=${encodeURIComponent(business.nif)}`;
+
+        this.#ui.openQrModal(business, fullUrl);
     }
 
     /**
@@ -813,7 +894,7 @@ export class App {
             report.client.nif,
             report.client.status,
             r.rating,
-            r.isPositive() ? 'Google Maps' : 'Caixa de Reclamacoes',
+            r.isPositive() ? 'Opiniao no Google' : 'Caixa de Reclamacoes',
             (r.comment || '').replace(/"/g, '""'),
             (r.customerContact || '').replace(/"/g, '""')
         ]);

@@ -2,6 +2,8 @@
  * @fileoverview Camada de Apresentação e Manipulação Segura do DOM (js/ui/UIManager.js)
  */
 
+import { QRCode } from '../utils/QRCode.js';
+
 /**
  * Textos descritivos de apoio para cada classificação de 1 a 5 estrelas.
  * @type {Readonly<Record<number, string>>}
@@ -10,8 +12,8 @@ export const RATING_LABELS = Object.freeze({
     1: '1 Estrela — Muito insatisfeito (Abrir Caixa de Reclamações)',
     2: '2 Estrelas — Insatisfeito (Abrir Caixa de Reclamações)',
     3: '3 Estrelas — Razoável, pode melhorar (Abrir Caixa de Reclamações)',
-    4: '4 Estrelas — Gostei muito! (Publicar no Google Maps)',
-    5: '5 Estrelas — Excelente experiência! (Publicar no Google Maps)'
+    4: '4 Estrelas — Gostei muito! (Publicar Opinião no Google)',
+    5: '5 Estrelas — Excelente experiência! (Publicar Opinião no Google)'
 });
 
 /**
@@ -139,7 +141,22 @@ export class UIManager {
             emailCopyFeedback: document.getElementById('email-copy-feedback'),
             btnAutoSendGmail: document.getElementById('btn-auto-send-gmail'),
             autoSendGmailText: document.getElementById('auto-send-gmail-text'),
-            emailSendStatusAlert: document.getElementById('email-send-status-alert')
+            emailSendStatusAlert: document.getElementById('email-send-status-alert'),
+
+            // Modal QR Code & Placa de Mesa Oficial
+            qrModal: document.getElementById('qr-modal'),
+            btnCloseQrModal: document.getElementById('btn-close-qr-modal'),
+            printableTableStand: document.getElementById('printable-table-stand'),
+            qrModalLogo: document.getElementById('qr-modal-logo'),
+            qrModalInitials: document.getElementById('qr-modal-initials'),
+            qrModalClientName: document.getElementById('qr-modal-client-name'),
+            qrModalNif: document.getElementById('qr-modal-nif'),
+            qrCodeCanvas: document.getElementById('qr-code-canvas'),
+            qrModalUrlInput: document.getElementById('qr-modal-url-input'),
+            btnCopyQrLink: document.getElementById('btn-copy-qr-link'),
+            btnDownloadQrPng: document.getElementById('btn-download-qr-png'),
+            btnPrintTableStand: document.getElementById('btn-print-table-stand'),
+            qrCopyFeedback: document.getElementById('qr-copy-feedback')
         };
     }
 
@@ -309,7 +326,7 @@ export class UIManager {
 
         if (sentimentHelpLabel) {
             if (sentiment === 'positive') {
-                sentimentHelpLabel.textContent = 'A preparar o seu redirecionamento para o Google Maps... ⭐';
+                sentimentHelpLabel.textContent = 'A preparar a sua Opinião no Google... ⭐';
                 sentimentHelpLabel.classList.add('text-emerald-600', 'font-medium');
             } else if (sentiment === 'negative') {
                 sentimentHelpLabel.textContent = 'A sua mensagem será enviada confidencialmente à gerência.';
@@ -399,8 +416,8 @@ export class UIManager {
     }
 
     /**
-     * Prepara e mostra a vista de redirecionamento para o Google Maps.
-     * @param {string} googleReviewUrl - Endereço oficial do Google Maps.
+     * Prepara e mostra a vista de redirecionamento para a Opinião no Google.
+     * @param {string} googleReviewUrl - Endereço oficial de avaliação no Google.
      * @returns {void}
      */
     showRedirectingView(googleReviewUrl) {
@@ -483,6 +500,7 @@ export class UIManager {
 
         const actions = [
             { action: 'open', icon: '📊', label: 'Ver Relatório & Gráficos 3D' },
+            { action: 'qr', icon: '📱', label: 'Gerar QR Code & Placa de Mesa' },
             { action: 'pdf', icon: '🖨️', label: 'Exportar Relatório (PDF)' },
             { action: 'csv', icon: '📥', label: 'Exportar Críticas (CSV / Excel)' },
             { action: 'sql', icon: '🗄️', label: 'Exportar Relatório SQL (.sql)' }
@@ -719,6 +737,14 @@ export class UIManager {
                 'px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200/80 transition';
             openLink.textContent = '🔗 Abrir';
 
+            const qrBtn = document.createElement('button');
+            qrBtn.type = 'button';
+            qrBtn.dataset.companyNif = biz.nif;
+            qrBtn.dataset.qrAction = 'open';
+            qrBtn.className =
+                'px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition';
+            qrBtn.textContent = '📱 Placa / QR';
+
             const reportBtn = document.createElement('button');
             reportBtn.type = 'button';
             reportBtn.dataset.companyId = biz.id || '';
@@ -742,7 +768,7 @@ export class UIManager {
                 'px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 transition';
             deleteBtn.textContent = '🗑️';
 
-            controls.append(statusSelect, openLink, reportBtn, editBtn, deleteBtn);
+            controls.append(statusSelect, openLink, qrBtn, reportBtn, editBtn, deleteBtn);
             row.append(left, controls, this.#createDotsDropdownElement(dropdownKey, biz));
             container.appendChild(row);
         });
@@ -908,6 +934,67 @@ export class UIManager {
     closeEmailDispatchModal() {
         if (this.elements.emailDispatchModal) {
             this.elements.emailDispatchModal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Abre e preenche o Modal de QR Code e Placa de Mesa Oficial com o link híbrido (NFC + QR).
+     * @param {import('../models/Business.js').Business} business - Instância do estabelecimento.
+     * @param {string} fullUrl - URL oficial gravado no QR Code.
+     * @returns {void}
+     */
+    openQrModal(business, fullUrl) {
+        if (!this.elements.qrModal) return;
+
+        if (this.elements.qrModalClientName) {
+            this.elements.qrModalClientName.textContent = business.name;
+        }
+
+        if (this.elements.qrModalNif) {
+            this.elements.qrModalNif.textContent = `NIF: ${business.nif}`;
+        }
+
+        if (this.elements.qrModalUrlInput) {
+            this.elements.qrModalUrlInput.value = fullUrl;
+        }
+
+        if (this.elements.qrCopyFeedback) {
+            this.elements.qrCopyFeedback.classList.add('hidden');
+        }
+
+        // Logótipo ou Iniciais
+        if (this.elements.qrModalLogo && this.elements.qrModalInitials) {
+            if (business.logoUrl) {
+                this.elements.qrModalLogo.src = business.logoUrl;
+                this.elements.qrModalLogo.classList.remove('hidden');
+                this.elements.qrModalInitials.classList.add('hidden');
+                this.elements.qrModalLogo.onerror = () => {
+                    this.elements.qrModalLogo.classList.add('hidden');
+                    this.elements.qrModalInitials.textContent = business.getInitials();
+                    this.elements.qrModalInitials.classList.remove('hidden');
+                };
+            } else {
+                this.elements.qrModalLogo.classList.add('hidden');
+                this.elements.qrModalInitials.textContent = business.getInitials();
+                this.elements.qrModalInitials.classList.remove('hidden');
+            }
+        }
+
+        // Renderizar o QR Code no Canvas em alta definição (600x600)
+        if (this.elements.qrCodeCanvas) {
+            QRCode.renderToCanvas(this.elements.qrCodeCanvas, fullUrl, 600);
+        }
+
+        this.elements.qrModal.classList.remove('hidden');
+    }
+
+    /**
+     * Fecha o Modal de QR Code e Placa de Mesa Oficial.
+     * @returns {void}
+     */
+    closeQrModal() {
+        if (this.elements.qrModal) {
+            this.elements.qrModal.classList.add('hidden');
         }
     }
 
@@ -1194,7 +1281,7 @@ export class UIManager {
 
         const legendY = height - 18;
         const legendItems = [
-            { color: '#10b981', text: `Google Maps: ${pos} (${Math.round((pos / total) * 100)}%)` },
+            { color: '#10b981', text: `Opinião no Google: ${pos} (${Math.round((pos / total) * 100)}%)` },
             { color: '#f43f5e', text: `Reclamações: ${neg} (${Math.round((neg / total) * 100)}%)` }
         ];
 

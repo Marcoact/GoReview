@@ -149,7 +149,7 @@ exports.handler = async (event) => {
         if (waUrl) {
             textBody += `👉 RESPONDER IMEDIATAMENTE VIA WHATSAPP:\n${waUrl}\n\n`;
         }
-        textBody += `🔒 Esta crítica NÃO foi publicada no Google Maps. Foi retida no seu canal confidencial GoReview.\n`;
+        textBody += `🔒 Esta crítica NÃO foi publicada no Google. Foi retida no seu canal confidencial GoReview.\n`;
 
         let htmlBody = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
@@ -179,12 +179,12 @@ exports.handler = async (event) => {
                 </div>
                 ` : ''}
                 <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 12px; color: #64748b; line-height: 1.6;">
-                    <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google Maps e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
+                    <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
                     <p style="margin: 0;">⏱️ <strong>Compromisso de Resposta:</strong> O cliente foi informado de uma resolução em até 7 dias.</p>
                 </div>
             </div>
             <div style="background-color: #f8fafc; padding: 12px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
-                GoReview — Gestão Inteligente de Reputação NFC & Google Maps
+                GoReview — Gestão Inteligente de Reputação e Avaliações no Google
             </div>
         </div>
         `;

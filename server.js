@@ -91,9 +91,9 @@ function generateReportPdfBuffer(reportData) {
     text('MEDIA GLOBAL', 178, startY + 16, { font: '/F2', size: 7.5, color: [0.1, 0.55, 0.35] });
     text(`${avgRating} / 5.0`, 178, startY + 42, { font: '/F2', size: 18, color: [0.05, 0.48, 0.28] });
 
-    // KPI 3: Google Maps
+    // KPI 3: Opiniões no Google
     rect(300, startY, boxW, boxH, [0.95, 0.96, 1.0], [0.8, 0.82, 0.95]);
-    text('GOOGLE MAPS (4-5 Estrelas)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
+    text('OPINIOES NO GOOGLE (4-5★)', 310, startY + 16, { font: '/F2', size: 7.5, color: [0.35, 0.35, 0.75] });
     text(`${positiveCount} (${positiveRate}%)`, 310, startY + 42, { font: '/F2', size: 16, color: [0.25, 0.25, 0.65] });
 
     // KPI 4: Reclamações
@@ -174,7 +174,7 @@ function generateReportPdfBuffer(reportData) {
 
     // 6. Rodapé Oficial GoReview
     rect(36, 780, 524, 30, [0.97, 0.98, 1.0], [0.85, 0.88, 0.94]);
-    text('GoReview Reports - Documento confidencial gerado automaticamente pelo Sistema de Gestao Etica NFC & Google Maps.', 46, 794, {
+    text('GoReview Reports - Documento confidencial gerado automaticamente pelo Sistema GoReview de Gestao de Opinioes no Google.', 46, 794, {
         font: '/F1',
         size: 7,
         color: [0.4, 0.45, 0.55]
@@ -469,7 +469,7 @@ const server = http.createServer((req, res) => {
                 if (waUrl) {
                     textBody += `👉 RESPONDER IMEDIATAMENTE VIA WHATSAPP:\n${waUrl}\n\n`;
                 }
-                textBody += `🔒 Esta crítica NÃO foi publicada no Google Maps. Foi retida no seu canal confidencial GoReview.\n`;
+                textBody += `🔒 Esta crítica NÃO foi publicada no Google. Foi retida no seu canal confidencial GoReview.\n`;
                 textBody += `Aceda ao Portal de Administração para gerir as reclamações: http://localhost:3001/?admin=true\n`;
 
                 // Corpo em HTML de Alto Impacto com Botão de 1 Clique para WhatsApp
@@ -501,12 +501,12 @@ const server = http.createServer((req, res) => {
                         </div>
                         ` : ''}
                         <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 12px; color: #64748b; line-height: 1.6;">
-                            <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google Maps e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
+                            <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
                             <p style="margin: 0;">⏱️ <strong>Compromisso de Resposta:</strong> O cliente foi informado de uma resolução em até 7 dias.</p>
                         </div>
                     </div>
                     <div style="background-color: #f8fafc; padding: 12px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
-                        GoReview — Gestão Inteligente de Reputação NFC & Google Maps
+                        GoReview — Gestão Inteligente de Reputação e Avaliações no Google
                     </div>
                 </div>
                 `;

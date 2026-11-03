@@ -102,7 +102,7 @@
                         <span class="text-xl font-bold tracking-tight text-slate-900">GoReview</span>
                         <span class="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">NFC & Maps</span>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Gestão Inteligente de Reputação no Google Maps</p>
+                    <p class="text-xs text-slate-500 mt-1">Gestão Inteligente de Reputação e Avaliações no Google</p>
                 </div>
 
                 <div class="text-center space-y-1.5 pt-2 border-t border-slate-100">
@@ -419,7 +419,7 @@
                             <span class="text-sm font-bold text-slate-800 group-hover:text-emerald-950">Sim, foi excelente!</span>
                             <span class="text-[11px] text-emerald-700 mt-0.5 font-medium">Recomendo vivamente</span>
                             <span class="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                                <span>Avaliar no Google</span>
+                                <span>Deixar Opinião no Google</span>
                                 <span>&rarr;</span>
                             </span>
                         </button>
@@ -515,7 +515,7 @@
             </section>
 
             <!-- ========================================================== -->
-            <!-- VISTA 6: REDIRECIONAMENTO GOOGLE MAPS (4 OU 5 ESTRELAS)    -->
+            <!-- VISTA 6: REDIRECIONAMENTO OPINIÃO NO GOOGLE (4 OU 5 ESTRELAS) -->
             <!-- ========================================================== -->
             <section id="view-redirecting" class="hidden py-8 text-center space-y-6">
                 <!-- Ícone Animado de Sucesso & Elevação -->
@@ -535,7 +535,7 @@
                     </div>
                     <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Muito obrigado pela preferência!</h2>
                     <p class="text-xs sm:text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
-                        A sua avaliação é fundamental para apoiar o nosso negócio local. Estamos a abrir o <strong>Google Maps</strong>...
+                        A sua opinião é fundamental para apoiar o nosso espaço. Estamos a abrir a sua página de <strong>Opinião no Google</strong>...
                     </p>
                 </div>
 
@@ -552,7 +552,7 @@
                         rel="noopener noreferrer"
                         class="inline-flex items-center justify-center gap-2.5 w-full py-3 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold text-xs shadow-md transition transform active:scale-98"
                     >
-                        <span>Abrir Google Maps Agora</span>
+                        <span>Publicar Opinião no Google Agora</span>
                         <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
@@ -676,7 +676,7 @@
 
                     <div class="sm:col-span-2">
                         <label for="client-field-google-url" class="block text-xs font-semibold text-slate-700 mb-1">
-                            Link Oficial de Avaliação Google Maps <span class="text-rose-500">*</span>
+                            Link Oficial para Opinião no Google <span class="text-rose-500">*</span>
                         </label>
                         <input
                             type="url"
@@ -863,7 +863,7 @@
                     </div>
 
                     <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">Google Maps (4–5★)</p>
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">Opiniões no Google (4–5★)</p>
                         <p id="kpi-positive" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
                         <p id="kpi-positive-rate" class="text-[11px] text-emerald-800/80 mt-0.5">0% redirecionadas</p>
                     </div>
@@ -894,7 +894,7 @@
                         <div class="mb-2 flex items-center justify-between">
                             <div>
                                 <h3 class="text-sm font-bold text-slate-900">Gestão Inteligente de Feedback (Circular 3D)</h3>
-                                <p class="text-xs text-slate-500">Google Maps (4–5★) vs. Caixa de Reclamações (1–3★)</p>
+                                <p class="text-xs text-slate-500">Opiniões no Google (4–5★) vs. Alertas Privados (1–3★)</p>
                             </div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">3D Pie</span>
                         </div>
@@ -1059,6 +1059,135 @@
                     >
                         <span>⚡</span>
                         <span id="auto-send-gmail-text">Enviar Automático (Gmail)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL GERADOR DE QR CODE & PLACA DE MESA OFICIAL GOREVIEW           -->
+    <!-- ================================================================== -->
+    <div
+        id="qr-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qr-modal-title"
+    >
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden my-6 transition-all transform animate-in fade-in zoom-in-95 duration-200">
+            <!-- Cabeçalho do Modal -->
+            <div id="qr-modal-header" class="no-print px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base font-bold">
+                        📱
+                    </div>
+                    <div>
+                        <h3 id="qr-modal-title" class="text-sm font-bold text-slate-900">Placa de Mesa & QR Code</h3>
+                        <p class="text-[11px] text-slate-500">Solução Híbrida: NFC para encostar + QR Code para a câmara</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    id="btn-close-qr-modal"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition"
+                    aria-label="Fechar"
+                >
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Corpo: A Placa de Mesa Oficial Pronta a Imprimir -->
+            <div class="p-6 space-y-4">
+                <!-- Contentor da Placa de Mesa (Acrílico / Balcão) -->
+                <div
+                    id="printable-table-stand"
+                    class="relative bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 text-center shadow-xl border-4 border-amber-400/80 space-y-4"
+                >
+                    <!-- Selo de Avaliação Certificada -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                        <span>⭐</span>
+                        <span>Plataforma GoReview Oficial</span>
+                    </div>
+
+                    <!-- Logótipo e Nome da Empresa -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="mx-auto w-14 h-14 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center overflow-hidden">
+                            <img id="qr-modal-logo" src="" alt="Logo" class="w-full h-full object-cover rounded-xl hidden" />
+                            <div id="qr-modal-initials" class="text-indigo-900 font-extrabold text-lg">GR</div>
+                        </div>
+                        <h4 id="qr-modal-client-name" class="text-lg font-extrabold tracking-tight text-white drop-shadow-sm">Nome do Estabelecimento</h4>
+                        <p class="text-xs text-indigo-200 font-medium">Gostou da sua visita connosco?</p>
+                    </div>
+
+                    <!-- Caixa do QR Code em Alta Resolução -->
+                    <div class="bg-white rounded-2xl p-3.5 shadow-2xl mx-auto w-48 h-48 flex items-center justify-center border-2 border-indigo-200/60">
+                        <canvas id="qr-code-canvas" class="w-full h-full rounded-lg"></canvas>
+                    </div>
+
+                    <!-- Instrução Dual (NFC + QR Code) -->
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold">
+                            <span>📲</span>
+                            <span>Aproxime o telemóvel ou aponte a câmara</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">Partilhe a sua opinião em menos de 10 segundos!</p>
+                    </div>
+
+                    <!-- 5 Estrelas Douradas -->
+                    <div class="flex items-center justify-center gap-1 text-amber-400 text-lg">
+                        <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                    </div>
+
+                    <!-- Rodapé com NIF e Segurança -->
+                    <div class="pt-2 border-t border-white/10 text-[10px] text-slate-400 flex items-center justify-between">
+                        <span id="qr-modal-nif" class="font-mono">NIF: 509123456</span>
+                        <span class="font-semibold text-emerald-400">● Avaliação Segura</span>
+                    </div>
+                </div>
+
+                <!-- URL e Copiar Link -->
+                <div id="qr-modal-helper-text" class="no-print space-y-2 bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                        <span>Link Oficial Gravado no QR Code & NFC:</span>
+                        <span id="qr-copy-feedback" class="text-emerald-600 font-semibold hidden">Copiado! ✓</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="qr-modal-url-input"
+                            readonly
+                            class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-700 truncate focus:outline-none"
+                        />
+                        <button
+                            type="button"
+                            id="btn-copy-qr-link"
+                            class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition flex-shrink-0"
+                        >
+                            Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ações do Modal -->
+                <div id="qr-modal-actions" class="no-print grid grid-cols-2 gap-2.5 pt-1">
+                    <button
+                        type="button"
+                        id="btn-download-qr-png"
+                        class="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
+                    >
+                        <span>📥</span>
+                        <span>Descarregar QR Code (HD)</span>
+                    </button>
+                    <button
+                        type="button"
+                        id="btn-print-table-stand"
+                        class="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition"
+                    >
+                        <span>🖨️</span>
+                        <span>Imprimir Placa de Mesa</span>
                     </button>
                 </div>
             </div>
