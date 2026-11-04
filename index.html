@@ -40,14 +40,14 @@
                 display: none !important;
             }
 
-            /* Caso 1: Impressão da Placa de Mesa GoReview */
+            /* Caso 1: Impressão Direta: APENAS o QR Code Puro e Nítido */
             body.printing-qr-stand > *:not(#qr-modal) {
                 display: none !important;
             }
             body.printing-qr-stand #qr-modal {
                 display: block !important;
                 position: static !important;
-                background: transparent !important;
+                background: white !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 overflow: visible !important;
@@ -56,10 +56,10 @@
             body.printing-qr-stand #qr-modal > div {
                 box-shadow: none !important;
                 border: none !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 max-width: 100% !important;
                 padding: 0 !important;
-                background: transparent !important;
+                background: white !important;
             }
             body.printing-qr-stand #qr-modal-header,
             body.printing-qr-stand #qr-modal-actions,
@@ -68,17 +68,38 @@
             }
             body.printing-qr-stand #printable-table-stand {
                 display: block !important;
-                margin: 15mm auto !important;
-                width: 105mm !important; /* Stand formato standard A6 */
-                max-width: 100% !important;
+                background: transparent !important;
+                border: none !important;
                 box-shadow: none !important;
-                border: 2px dashed #64748b !important;
-                border-radius: 24px !important;
-                page-break-inside: avoid !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
             }
-            body.printing-qr-stand #printable-table-stand * {
+            /* Ocultar todos os textos, molduras, logos, estrelas e selos da maquete */
+            body.printing-qr-stand #printable-table-stand > *:not(#qr-code-box) {
+                display: none !important;
+            }
+            /* Apresentar apenas o QR Code Puro, centrado perfeitamente na folha */
+            body.printing-qr-stand #qr-code-box {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                margin: 40mm auto 0 auto !important;
+                width: 85mm !important;
+                height: 85mm !important;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                page-break-inside: avoid !important;
+            }
+            body.printing-qr-stand #qr-code-canvas {
+                display: block !important;
+                width: 85mm !important;
+                height: 85mm !important;
+                margin: 0 auto !important;
+                border: none !important;
+                box-shadow: none !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -1169,7 +1190,7 @@
                     </div>
 
                     <!-- Caixa do QR Code em Alta Resolução -->
-                    <div class="bg-white rounded-2xl p-3.5 shadow-2xl mx-auto w-48 h-48 flex items-center justify-center border-2 border-indigo-200/60">
+                    <div id="qr-code-box" class="bg-white rounded-2xl p-3.5 shadow-2xl mx-auto w-48 h-48 flex items-center justify-center border-2 border-indigo-200/60">
                         <canvas id="qr-code-canvas" class="w-full h-full rounded-lg"></canvas>
                     </div>
 
@@ -1233,7 +1254,7 @@
                         class="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-sm transition"
                     >
                         <span>🖨️</span>
-                        <span>Imprimir Placa de Mesa</span>
+                        <span>Imprimir QR Code</span>
                     </button>
                 </div>
             </div>
