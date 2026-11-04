@@ -615,7 +615,7 @@ export class UIManager {
             const testLink = document.createElement('a');
             testLink.href = `?nif=${encodeURIComponent(biz.nif)}`;
             testLink.className = 'text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition flex-shrink-0 ml-2';
-            testLink.textContent = 'Testar →';
+            testLink.textContent = 'Avaliar →';
 
             card.append(leftGroup, testLink, this.#createDotsDropdownElement(dropdownKey, biz));
             container.appendChild(card);
