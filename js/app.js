@@ -786,10 +786,13 @@ export class App {
         if (el.btnPrintTableStand) {
             el.btnPrintTableStand.addEventListener('click', () => {
                 document.body.classList.add('printing-qr-stand');
-                window.print();
                 setTimeout(() => {
-                    document.body.classList.remove('printing-qr-stand');
-                }, 1000);
+                    window.print();
+                }, 80);
+            });
+
+            window.addEventListener('afterprint', () => {
+                document.body.classList.remove('printing-qr-stand');
             });
         }
     }

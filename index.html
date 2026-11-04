@@ -36,24 +36,70 @@
 
     <style>
         @media print {
-            body > *:not(#report-modal) {
+            .no-print {
                 display: none !important;
             }
-            #report-modal {
+
+            /* Caso 1: Impressão da Placa de Mesa GoReview */
+            body.printing-qr-stand > *:not(#qr-modal) {
+                display: none !important;
+            }
+            body.printing-qr-stand #qr-modal {
+                display: block !important;
+                position: static !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                backdrop-filter: none !important;
+            }
+            body.printing-qr-stand #qr-modal > div {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 auto !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+                background: transparent !important;
+            }
+            body.printing-qr-stand #qr-modal-header,
+            body.printing-qr-stand #qr-modal-actions,
+            body.printing-qr-stand #qr-modal-helper-text {
+                display: none !important;
+            }
+            body.printing-qr-stand #printable-table-stand {
+                display: block !important;
+                margin: 15mm auto !important;
+                width: 105mm !important; /* Stand formato standard A6 */
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: 2px dashed #64748b !important;
+                border-radius: 24px !important;
+                page-break-inside: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body.printing-qr-stand #printable-table-stand * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Caso 2: Impressão do Relatório Mensal 3D */
+            body:not(.printing-qr-stand) > *:not(#report-modal) {
+                display: none !important;
+            }
+            body:not(.printing-qr-stand) #report-modal {
+                display: block !important;
                 position: static !important;
                 background: white !important;
                 padding: 0 !important;
                 overflow: visible !important;
             }
-            #report-modal-panel {
+            body:not(.printing-qr-stand) #report-modal-panel {
                 box-shadow: none !important;
                 border: none !important;
                 max-width: 100% !important;
                 max-height: none !important;
                 overflow: visible !important;
-            }
-            .no-print {
-                display: none !important;
             }
         }
     </style>
