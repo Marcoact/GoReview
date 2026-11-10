@@ -127,12 +127,26 @@ exports.handler = async (event) => {
         const digits = customerContact.replace(/\D/g, '');
         let cleanPhone = null;
         let waUrl = null;
+        let telUrl = null;
+        let smsUrl = null;
+        const isEmail = customerContact.includes('@') && customerContact.includes('.');
+        let mailtoUrl = null;
+
         if (digits.length >= 9) {
             cleanPhone = digits.length === 9 ? `351${digits}` : digits;
-            const waText = encodeURIComponent(
-                `Olá! Somos da gerência do ${businessName}. Lemos o seu comentário e gostaríamos de pedir as mais sinceras desculpas pelo sucedido. Como podemos compensar a sua experiência connosco?`
-            );
+            const preWrittenMessage = `Olá! Somos da gerência do ${businessName}. Lemos o seu comentário e gostaríamos de pedir as mais sinceras desculpas pelo sucedido. Como podemos compensar a sua experiência connosco?`;
+            const waText = encodeURIComponent(preWrittenMessage);
             waUrl = `https://wa.me/${cleanPhone}?text=${waText}`;
+            telUrl = `tel:+${cleanPhone}`;
+            smsUrl = `sms:+${cleanPhone}?body=${waText}`;
+        }
+
+        if (isEmail) {
+            const emailSubject = encodeURIComponent(`Acompanhamento da gerência – ${businessName}`);
+            const emailBody = encodeURIComponent(
+                `Olá!\n\nSomos da gerência do ${businessName}.\nLemos atentamente a sua mensagem na nossa Caixa de Reclamações e lamentamos profundamente que a sua experiência não tenha sido positiva.\n\nGostaríamos de falar consigo para resolver a situação e compensar o sucedido.\n\nCom os melhores cumprimentos,\nGerência de ${businessName}`
+            );
+            mailtoUrl = `mailto:${customerContact}?subject=${emailSubject}&body=${emailBody}`;
         }
 
         const starsText = '⭐'.repeat(rating);
@@ -146,8 +160,17 @@ exports.handler = async (event) => {
         textBody += `MENSAGEM DO CLIENTE:\n"${comment}"\n`;
         textBody += `----------------------------------------------------------------------\n\n`;
         textBody += `CONTACTO DO CLIENTE: ${customerContact || 'Sem contacto facultado'}\n\n`;
+        if (telUrl) {
+            textBody += `👉 LIGAR IMEDIATAMENTE AO CLIENTE:\n${telUrl}\n\n`;
+        }
         if (waUrl) {
-            textBody += `👉 RESPONDER IMEDIATAMENTE VIA WHATSAPP:\n${waUrl}\n\n`;
+            textBody += `👉 RESPONDER VIA WHATSAPP (MENSAGEM PRÉ-ESCRITA):\n${waUrl}\n\n`;
+        }
+        if (smsUrl) {
+            textBody += `👉 ENVIAR SMS DIRETO:\n${smsUrl}\n\n`;
+        }
+        if (mailtoUrl) {
+            textBody += `👉 RESPONDER POR E-MAIL:\n${mailtoUrl}\n\n`;
         }
         textBody += `🔒 Esta crítica NÃO foi publicada no Google. Foi retida no seu canal confidencial GoReview.\n`;
 
@@ -166,18 +189,47 @@ exports.handler = async (event) => {
                     </div>
                     <p style="font-size: 15px; color: #1e293b; line-height: 1.5; margin: 10px 0; font-style: italic;">"${comment}"</p>
                 </div>
-                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
                     <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Contacto Indicado pelo Cliente</span>
-                    <p style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 6px 0 0 0;">${customerContact || 'Sem contacto facultado'}</p>
+                    <p style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 6px 0 16px 0;">${customerContact || 'Sem contacto facultado'}</p>
+
+                    ${(waUrl || telUrl || mailtoUrl) ? `
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; text-align: center;">
+                        <p style="font-size: 12px; font-weight: 700; color: #334155; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ⚡ Ações Imediatas de Resposta e Recuperação
+                        </p>
+                        <div style="text-align: center;">
+                            ${telUrl ? `
+                            <a href="${telUrl}" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 20px; border-radius: 10px; margin: 4px; box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.3);">
+                                📞 Ligar Imediatamente
+                            </a>
+                            ` : ''}
+                            ${waUrl ? `
+                            <a href="${waUrl}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 20px; border-radius: 10px; margin: 4px; box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3);">
+                                💬 Enviar WhatsApp
+                            </a>
+                            ` : ''}
+                            ${smsUrl ? `
+                            <a href="${smsUrl}" style="display: inline-block; background-color: #ffffff; color: #334155; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600; text-decoration: none; padding: 11px 18px; border-radius: 10px; margin: 4px;">
+                                📱 Enviar SMS
+                            </a>
+                            ` : ''}
+                            ${mailtoUrl ? `
+                            <a href="${mailtoUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 20px; border-radius: 10px; margin: 4px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);">
+                                ✉️ Responder por E-mail
+                            </a>
+                            ` : ''}
+                        </div>
+                        <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0;">
+                            Toque no botão para abrir diretamente a chamada telefónica ou a mensagem pré-escrita.
+                        </p>
+                    </div>
+                    ` : `
+                    <p style="font-size: 12px; color: #64748b; margin: 0; font-style: italic;">
+                        O cliente optou por não indicar contacto telefónico ou e-mail. Esta crítica foi registada confidencialmente para análise da gerência.
+                    </p>
+                    `}
                 </div>
-                ${waUrl ? `
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <a href="${waUrl}" target="_blank" style="display: inline-block; background-color: #25D366; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3);">
-                        💬 Responder no WhatsApp com 1 Clique
-                    </a>
-                    <p style="font-size: 11px; color: #64748b; margin-top: 8px;">Abre a conversa no WhatsApp já com mensagem de recuperação pré-escrita.</p>
-                </div>
-                ` : ''}
                 <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; font-size: 12px; color: #64748b; line-height: 1.6;">
                     <p style="margin: 0 0 6px 0;">🛡️ <strong>Proteção de Marca:</strong> Esta crítica <strong>NÃO</strong> foi publicada no Google e foi guardada exclusivamente na sua Caixa de Reclamações privada.</p>
                     <p style="margin: 0;">⏱️ <strong>Compromisso de Resposta:</strong> O cliente foi informado de uma resolução em até 7 dias.</p>
