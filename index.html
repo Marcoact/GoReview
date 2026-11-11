@@ -94,12 +94,16 @@
                 page-break-inside: avoid !important;
             }
             body.printing-qr-stand #qr-code-canvas {
+                display: none !important;
+            }
+            body.printing-qr-stand #qr-code-img {
                 display: block !important;
-                width: 85mm !important;
-                height: 85mm !important;
+                width: 90mm !important;
+                height: 90mm !important;
                 margin: 0 auto !important;
                 border: none !important;
                 box-shadow: none !important;
+                object-fit: contain !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -1192,6 +1196,7 @@
                     <!-- Caixa do QR Code em Alta Resolução -->
                     <div id="qr-code-box" class="bg-white rounded-2xl p-3.5 shadow-2xl mx-auto w-48 h-48 flex items-center justify-center border-2 border-indigo-200/60">
                         <canvas id="qr-code-canvas" class="w-full h-full rounded-lg"></canvas>
+                        <img id="qr-code-img" class="hidden w-full h-full rounded-lg object-contain" alt="QR Code" />
                     </div>
 
                     <!-- Instrução Dual (NFC + QR Code) -->

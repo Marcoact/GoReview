@@ -85,10 +85,6 @@ export class App {
             this.#bindReportListeners();
             this.#bindAdminListeners();
 
-            // Atualizar diretório de empresas ativas
-            const { businesses: activeList } = await this.#businessService.getAll({ onlyActive: true });
-            this.#ui.renderDirectoryList(activeList);
-
             // Rota 1: Portal de Administração Interna (?admin=true) — Protegido por Login
             if (this.#router.isAdminRoute()) {
                 if (this.#authService.isAuthenticated()) {
@@ -103,29 +99,31 @@ export class App {
                 return;
             }
 
-            // Rota 2: Diretório de Teste (sem ?nif= na URL)
+            // Rota 2: Avaliação por NIF/Slug (?nif=509123456) — Prioridade Máxima NFC & QR (Carregamento Ultrarrápido)
             const nifParam = this.#router.getNif();
-            if (!nifParam) {
-                this.#ui.showView('directory');
+            if (nifParam) {
+                const { business, error } = await this.#businessService.getByNif(nifParam);
+                if (error || !business) {
+                    Logger.warn('App', `Não foi possível carregar empresa para "${nifParam}": ${error}`);
+                    this.#ui.showError(error || 'Estabelecimento não encontrado ou inativo.');
+                    return;
+                }
+
+                this.#currentBusiness = business;
+                this.#ui.renderBusinessProfile(business);
+                this.#ui.setSentimentSelection(null);
+                this.#ui.togglePrivateFeedbackForm(false);
+                this.#bindSentimentListeners();
+                this.#bindStarRatingListeners();
+                this.#bindPrivateFeedbackFormListener();
+                this.#ui.showView('main');
                 return;
             }
 
-            // Rota 3: Avaliação por NIF (?nif=501234567)
-            const { business, error } = await this.#businessService.getByNif(nifParam);
-            if (error || !business) {
-                Logger.warn('App', `Não foi possível carregar empresa para "${nifParam}": ${error}`);
-                this.#ui.showError(error || 'Estabelecimento não encontrado ou inativo.');
-                return;
-            }
-
-            this.#currentBusiness = business;
-            this.#ui.renderBusinessProfile(business);
-            this.#ui.setSentimentSelection(null);
-            this.#ui.togglePrivateFeedbackForm(false);
-            this.#bindSentimentListeners();
-            this.#bindStarRatingListeners();
-            this.#bindPrivateFeedbackFormListener();
-            this.#ui.showView('main');
+            // Rota 3: Diretório Oficial de Estabelecimentos (sem ?nif= na URL)
+            const { businesses: activeList } = await this.#businessService.getAll({ onlyActive: true });
+            this.#ui.renderDirectoryList(activeList);
+            this.#ui.showView('directory');
         } catch (fatalError) {
             Logger.error('App', 'Erro crítico durante a inicialização da aplicação:', fatalError);
             this.#ui.showError('Ocorreu um erro inesperado ao iniciar a aplicação.');
@@ -785,14 +783,97 @@ export class App {
 
         if (el.btnPrintTableStand) {
             el.btnPrintTableStand.addEventListener('click', () => {
-                document.body.classList.add('printing-qr-stand');
-                setTimeout(() => {
-                    window.print();
-                }, 80);
-            });
+                if (!el.qrCodeCanvas) return;
+                const dataUrl = el.qrCodeCanvas.toDataURL('image/png');
+                const clientName = el.qrModalClientName?.textContent || 'Estabelecimento';
 
-            window.addEventListener('afterprint', () => {
-                document.body.classList.remove('printing-qr-stand');
+                // Criar iframe isolado e invisível para impressão direta do QR Code (evita ecrã branco do Chrome)
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                iframe.style.zIndex = '-9999';
+                document.body.appendChild(iframe);
+
+                const frameDoc = iframe.contentWindow.document;
+                frameDoc.open();
+                frameDoc.write(`<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Code - ${clientName}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+        }
+        .qr-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        img {
+            width: 110mm;
+            height: 110mm;
+            max-width: 85vw;
+            max-height: 85vh;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-wrap">
+        <img src="${dataUrl}" alt="QR Code Oficial" />
+    </div>
+</body>
+</html>`);
+                frameDoc.close();
+
+                const qrImg = frameDoc.querySelector('img');
+                const triggerPrint = () => {
+                    setTimeout(() => {
+                        try {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        } catch (err) {
+                            Logger.warn('App', 'Fallback para window.print direto:', err);
+                            document.body.classList.add('printing-qr-stand');
+                            window.print();
+                        } finally {
+                            setTimeout(() => {
+                                if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                }
+                                document.body.classList.remove('printing-qr-stand');
+                            }, 1000);
+                        }
+                    }, 120);
+                };
+
+                if (qrImg.complete) {
+                    triggerPrint();
+                } else {
+                    qrImg.onload = triggerPrint;
+                }
             });
         }
     }

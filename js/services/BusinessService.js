@@ -16,6 +16,12 @@ export class BusinessService {
     #supabaseClient;
 
     /**
+     * Cache em memória para carregamento instantâneo (0ms) de estabelecimentos.
+     * @type {Map<string, Business>}
+     */
+    static #memoryCache = new Map();
+
+    /**
      * @param {SupabaseClient} [supabaseClientInstance=SupabaseClient.getInstance()] - Instância Singleton do SupabaseClient.
      */
     constructor(supabaseClientInstance = SupabaseClient.getInstance()) {
@@ -83,22 +89,36 @@ export class BusinessService {
             }
         }
 
-        // 1. Modo Mock direto
-        if (this.#supabaseClient.isMockMode()) {
-            return this.#findInMockByIdentifier(cleanId);
+        // 0. Cache em memória ultrarrápido (0ms)
+        if (BusinessService.#memoryCache.has(cleanId)) {
+            const cached = BusinessService.#memoryCache.get(cleanId);
+            if (cached && cached.isActive) {
+                return { business: cached, error: null };
+            }
         }
 
-        // 2. Modo Produção (Supabase) com fallback para Mock se for um NIF de demonstração local
+        // 1. Modo Mock direto
+        if (this.#supabaseClient.isMockMode()) {
+            const res = this.#findInMockByIdentifier(cleanId);
+            if (res.business) {
+                BusinessService.#memoryCache.set(cleanId, res.business);
+            }
+            return res;
+        }
+
+        // 2. Modo Produção (Supabase) com proteção de timeout e fallback automático
         try {
             const db = this.#supabaseClient.getClient();
-            const { data, error } = await db
+            const queryPromise = db
                 .from('clients')
                 .select('id, name, category, nif, slug, email, logo_url, google_review_url, status, trial_ends_at, active, created_at')
                 .or(`nif.eq.${cleanId},slug.eq.${cleanId}`)
                 .maybeSingle();
 
+            const { data, error } = await this.#supabaseClient.executeWithTimeout(queryPromise, 2000);
+
             if (error) {
-                Logger.error('BusinessService', 'Erro ao consultar Supabase. A tentar fallback Mock Data.', error);
+                Logger.warn('BusinessService', 'Supabase indisponível ou com timeout. A ativar fallback Mock Data imediato.', error);
                 return this.#findInMockByIdentifier(cleanId);
             }
 
@@ -120,10 +140,15 @@ export class BusinessService {
                 };
             }
 
+            // Armazenar em cache de memória para navegações subsequentes instantâneas
+            BusinessService.#memoryCache.set(cleanId, business);
+            if (business.nif) BusinessService.#memoryCache.set(business.nif.toLowerCase(), business);
+            if (business.slug) BusinessService.#memoryCache.set(business.slug.toLowerCase(), business);
+
             Logger.info('BusinessService', 'Estabelecimento carregado do Supabase com sucesso.', business);
             return { business, error: null };
         } catch (unexpectedError) {
-            Logger.error('BusinessService', 'Exceção inesperada em getByNif. A ativar fallback.', unexpectedError);
+            Logger.warn('BusinessService', 'Exceção/Timeout em getByNif. A ativar fallback instantâneo.', unexpectedError);
             return this.#findInMockByIdentifier(cleanId);
         }
     }
@@ -174,18 +199,24 @@ export class BusinessService {
                 query = query.neq('status', 'inactive');
             }
 
-            const { data, error } = await query;
+            const { data, error } = await this.#supabaseClient.executeWithTimeout(query, 2000);
             if (error) {
-                Logger.error('BusinessService', 'Erro ao listar estabelecimentos no Supabase:', error);
+                Logger.warn('BusinessService', 'Erro/timeout ao listar estabelecimentos no Supabase. Fallback local ativado.', error);
                 const fallback = this.#getMockStore();
                 return { businesses: onlyActive ? fallback.filter((b) => b.isActive) : fallback, error: error.message };
             }
 
             const businesses = (data || []).map((row) => Business.fromDatabase(row));
+            // Guardar estabelecimentos no cache
+            businesses.forEach((b) => {
+                BusinessService.#memoryCache.set(b.nif.toLowerCase(), b);
+                if (b.slug) BusinessService.#memoryCache.set(b.slug.toLowerCase(), b);
+            });
             return { businesses, error: null };
         } catch (error) {
-            Logger.error('BusinessService', 'Exceção em getAll:', error);
-            return { businesses: this.#getMockStore(), error: error.message };
+            Logger.warn('BusinessService', 'Exceção/Timeout em getAll:', error);
+            const fallback = this.#getMockStore();
+            return { businesses: onlyActive ? fallback.filter((b) => b.isActive) : fallback, error: error.message };
         }
     }
 

@@ -85,6 +85,30 @@ export class SupabaseClient {
     }
 
     /**
+     * Executa uma consulta Supabase com proteção de timeout ultrarrápido (por defeito 2000ms).
+     * Se a rede demorar mais que o limite (ex: Supabase pausado, DNS indisponível ou rede lenta),
+     * a promessa é abortada imediatamente para permitir fallback local instantâneo.
+     * @template T
+     * @param {Promise<T>} queryPromise - Promessa da consulta Supabase.
+     * @param {number} [timeoutMs=2000] - Tempo limite em milissegundos.
+     * @returns {Promise<T>}
+     */
+    async executeWithTimeout(queryPromise, timeoutMs = 2000) {
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+            timer = setTimeout(() => {
+                reject(new Error(`Timeout na ligação ao Supabase após ${timeoutMs}ms. Fallback local acionado.`));
+            }, timeoutMs);
+        });
+
+        try {
+            return await Promise.race([queryPromise, timeoutPromise]);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    /**
      * Indica se a aplicação está a correr em Modo de Demonstração (Mock Mode).
      * @returns {boolean}
      */

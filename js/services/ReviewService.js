@@ -87,10 +87,13 @@ export class ReviewService {
 
         try {
             const db = this.#supabaseClient.getClient();
-            const { error } = await db.from('reviews').insert([payload]);
+            const { error } = await this.#supabaseClient.executeWithTimeout(
+                db.from('reviews').insert([payload]),
+                2500
+            );
 
             if (error) {
-                Logger.error('ReviewService', 'Falha ao gravar avaliação no Supabase. A guardar em Mock Store.', error);
+                Logger.warn('ReviewService', 'Falha/Timeout ao gravar avaliação no Supabase. A guardar em Mock Store local.', error);
                 this.#saveToMockReviews(payload);
                 return { success: true, error: null };
             }
@@ -98,7 +101,7 @@ export class ReviewService {
             Logger.info('ReviewService', 'Avaliação registada com sucesso no Supabase.');
             return { success: true, error: null };
         } catch (unexpectedError) {
-            Logger.error('ReviewService', 'Exceção em submitReview:', unexpectedError);
+            Logger.warn('ReviewService', 'Exceção/Timeout em submitReview:', unexpectedError);
             this.#saveToMockReviews(payload);
             return { success: true, error: null };
         }
@@ -137,17 +140,19 @@ export class ReviewService {
         if (!this.#supabaseClient.isMockMode()) {
             try {
                 const db = this.#supabaseClient.getClient();
-                const { data, error } = await db
+                const queryPromise = db
                     .from('reviews')
                     .select('id, client_id, rating, comment, contact_info, redirected_to_google, created_at')
                     .eq('client_id', business.id)
                     .order('created_at', { ascending: false });
 
+                const { data, error } = await this.#supabaseClient.executeWithTimeout(queryPromise, 2000);
+
                 if (!error && Array.isArray(data)) {
                     rawReviews = data;
                 }
             } catch (error) {
-                Logger.warn('ReviewService', 'Falha ao obter reviews do Supabase; a usar dados locais.', error);
+                Logger.warn('ReviewService', 'Falha ou timeout ao obter reviews do Supabase; a usar dados locais.', error);
             }
         }
 

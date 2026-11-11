@@ -983,6 +983,9 @@ export class UIManager {
         // Renderizar o QR Code no Canvas em alta definição (600x600)
         if (this.elements.qrCodeCanvas) {
             QRCode.renderToCanvas(this.elements.qrCodeCanvas, fullUrl, 600);
+            if (this.elements.qrCodeImg) {
+                this.elements.qrCodeImg.src = this.elements.qrCodeCanvas.toDataURL('image/png');
+            }
         }
 
         this.elements.qrModal.classList.remove('hidden');
