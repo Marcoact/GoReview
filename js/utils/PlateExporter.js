@@ -352,3 +352,4 @@ export class PlateExporter {
         ctx.closePath();
     }
 }
+
