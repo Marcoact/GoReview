@@ -154,6 +154,7 @@ export class UIManager {
             qrCodeCanvas: document.getElementById('qr-code-canvas'),
             qrModalUrlInput: document.getElementById('qr-modal-url-input'),
             btnCopyQrLink: document.getElementById('btn-copy-qr-link'),
+            btnDownloadPlateHd: document.getElementById('btn-download-plate-hd'),
             btnDownloadQrPng: document.getElementById('btn-download-qr-png'),
             btnPrintTableStand: document.getElementById('btn-print-table-stand'),
             qrCopyFeedback: document.getElementById('qr-copy-feedback')

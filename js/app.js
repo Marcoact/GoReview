@@ -16,6 +16,7 @@ import { EmailService } from './services/EmailService.js';
 import { ReviewService } from './services/ReviewService.js';
 import { ValidatorService } from './services/ValidatorService.js';
 import { UIManager } from './ui/UIManager.js';
+import { PlateExporter } from './utils/PlateExporter.js';
 
 /**
  * Classe orquestradora da aplicação GoReview (Clean Architecture / SOLID).
@@ -54,6 +55,8 @@ export class App {
     #reportBusiness = null;
     /** @type {Object|null} */
     #currentReportData = null;
+    /** @type {Business|null} */
+    #activeQrBusiness = null;
 
     /**
      * @param {Object} dependencies - Dependências injetadas.
@@ -766,6 +769,35 @@ export class App {
             });
         }
 
+        // Exportar Placa Gráfica de Luxo em Ultra-Alta Resolução (300 DPI) para Gráfica
+        if (el.btnDownloadPlateHd) {
+            el.btnDownloadPlateHd.addEventListener('click', async () => {
+                if (!this.#activeQrBusiness) return;
+                const fullUrl = el.qrModalUrlInput?.value || '';
+                const originalHtml = el.btnDownloadPlateHd.innerHTML;
+
+                try {
+                    el.btnDownloadPlateHd.innerHTML = '<span>⏳</span><span>A Gerar Placa Gráfica 300 DPI...</span>';
+                    el.btnDownloadPlateHd.disabled = true;
+
+                    await PlateExporter.exportToPng({
+                        business: this.#activeQrBusiness,
+                        url: fullUrl
+                    });
+
+                    el.btnDownloadPlateHd.innerHTML = '<span>✅</span><span>Placa Gráfica Descarregada!</span>';
+                    setTimeout(() => {
+                        el.btnDownloadPlateHd.innerHTML = originalHtml;
+                        el.btnDownloadPlateHd.disabled = false;
+                    }, 2500);
+                } catch (err) {
+                    Logger.error('App', 'Erro ao exportar placa de mesa:', err);
+                    el.btnDownloadPlateHd.innerHTML = originalHtml;
+                    el.btnDownloadPlateHd.disabled = false;
+                }
+            });
+        }
+
         if (el.btnDownloadQrPng) {
             el.btnDownloadQrPng.addEventListener('click', () => {
                 if (!el.qrCodeCanvas) return;
@@ -884,6 +916,7 @@ export class App {
      * @returns {void}
      */
     #openQrModalForBusiness(business) {
+        this.#activeQrBusiness = business;
         // Obter URL oficial de produção para que as placas físicas impressas funcionem 100% online
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const baseOrigin = isLocal ? 'https://goreview-review.netlify.app' : window.location.origin;
